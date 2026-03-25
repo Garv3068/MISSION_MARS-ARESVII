@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journey to Mars — The Long Dark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --black:#02040A;--rust:#7A2208;--mars:#B84016;--flame:#E8943A;
+  --ember:#F5A623;--white:#EDE8E0;--muted:#4A5568;--dim:#2D3748;
+  --accent:#4FC3F7;--green:#39FF89;
+  --font-d:'Bebas Neue',sans-serif;--font-b:'Rajdhani',sans-serif;--font-m:'Share Tech Mono',monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--black);cursor:none;user-select:none;}
+
+/* CURSOR */
+#cur-dot{position:fixed;z-index:9999;width:8px;height:8px;background:var(--ember);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);mix-blend-mode:screen;}
+#cur-ring{position:fixed;z-index:9998;width:32px;height:32px;border:1px solid rgba(232,148,58,0.4);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);}
+#cur-cross-h,#cur-cross-v{position:fixed;z-index:9997;background:rgba(232,148,58,0.22);pointer-events:none;transform:translate(-50%,-50%);}
+#cur-cross-h{width:20px;height:1px;}#cur-cross-v{width:1px;height:20px;}
+
+/* GRAIN */
+body::after{content:'';position:fixed;inset:0;z-index:95;pointer-events:none;opacity:0.15;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");}
+
+canvas{position:fixed;inset:0;z-index:0;display:block;}
+
+/* HUD TOP */
+#hud-top{position:fixed;top:0;left:0;right:0;z-index:30;padding:16px 28px 28px;
+  background:linear-gradient(to bottom,rgba(2,4,10,0.96),transparent);
+  display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;}
+.hud-col{display:flex;flex-direction:column;gap:4px;}
+.hud-item{font-family:var(--font-m);font-size:clamp(9px,1.1vw,11px);color:rgba(150,140,125,0.7);letter-spacing:0.14em;}
+.hud-item span{color:var(--ember);}
+.hud-item .green{color:var(--green);}
+.hud-item .danger{color:#ff4444;animation:dng 0.7s infinite;}
+@keyframes dng{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* PROGRESS BAR */
+#pb-wrap{position:fixed;top:0;left:0;right:0;height:3px;z-index:40;background:rgba(255,255,255,0.04);}
+#pb-fill{height:100%;width:0%;background:linear-gradient(to right,var(--rust),var(--flame),var(--ember));transition:width 0.4s linear;}
+
+/* JOURNEY LABEL — Earth / Space / Mars labels */
+#phase-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;
+  pointer-events:none;text-align:center;opacity:0;transition:opacity 0.9s;}
+#phase-banner.show{opacity:1;}
+.pb-big{font-family:var(--font-d);font-size:clamp(44px,8vw,96px);letter-spacing:0.08em;
+  color:var(--white);text-shadow:0 0 60px rgba(237,232,224,0.3);line-height:0.95;}
+.pb-sub{font-family:var(--font-m);font-size:clamp(10px,1.3vw,13px);color:var(--muted);letter-spacing:0.24em;margin-top:10px;}
+
+/* DAY */
+#day-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:31;text-align:center;pointer-events:none;}
+.day-lbl{font-family:var(--font-m);font-size:9px;color:var(--muted);letter-spacing:0.28em;display:block;margin-bottom:2px;}
+#day-num{font-family:var(--font-d);font-size:clamp(32px,4vw,56px);letter-spacing:0.06em;color:var(--white);line-height:1;}
+
+/* CONTROLS */
+#ctrl-hint{position:fixed;bottom:74px;right:24px;z-index:30;pointer-events:none;
+  display:flex;flex-direction:column;gap:5px;align-items:flex-end;}
+.ctr{display:flex;align-items:center;gap:7px;}
+.ckey{font-family:var(--font-m);font-size:9px;color:var(--ember);background:rgba(232,148,58,0.07);
+  border:1px solid rgba(232,148,58,0.22);padding:2px 7px;border-radius:2px;letter-spacing:0.08em;}
+.cdesc{font-family:var(--font-m);font-size:9px;color:var(--muted);letter-spacing:0.1em;}
+
+/* TX BAR */
+#tx-bar{position:fixed;bottom:0;left:0;right:0;z-index:30;padding:10px 28px 16px;
+  background:linear-gradient(to top,rgba(2,4,10,0.98),transparent);
+  display:flex;align-items:flex-start;gap:10px;pointer-events:none;}
+.tx-icon{font-family:var(--font-m);font-size:9px;color:var(--flame);letter-spacing:0.18em;white-space:nowrap;padding-top:2px;flex-shrink:0;}
+#tx-text{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:var(--white);letter-spacing:0.08em;line-height:1.6;}
+
+/* MOBILE TOUCH */
+#touch-ctrl{position:fixed;bottom:130px;left:24px;z-index:31;display:none;flex-direction:column;gap:8px;align-items:center;}
+@media(max-width:700px){#touch-ctrl{display:flex;}}
+.tbtn{width:52px;height:52px;border:1px solid rgba(232,148,58,0.3);background:rgba(232,148,58,0.07);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:18px;color:var(--flame);cursor:none;touch-action:none;}
+.trow{display:flex;gap:8px;}
+
+/* MARS PROXIMITY */
+#mars-prox{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;
+  text-align:center;pointer-events:none;opacity:0;transition:opacity 1s;}
+#mars-prox.show{opacity:1;}
+.mp-tag{font-family:var(--font-m);font-size:11px;color:var(--green);letter-spacing:0.3em;margin-bottom:8px;}
+.mp-big{font-family:var(--font-d);font-size:clamp(40px,7vw,86px);letter-spacing:0.08em;
+  color:var(--green);text-shadow:0 0 60px rgba(57,255,137,0.4);line-height:0.9;}
+
+/* ARRIVAL SCREEN */
+#arrival{position:fixed;inset:0;z-index:60;background:rgba(2,4,10,0);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity 1.4s,background 1.4s;}
+#arrival.show{opacity:1;pointer-events:all;background:rgba(2,4,10,0.88);}
+.arr-tag{font-family:var(--font-m);font-size:11px;color:var(--green);letter-spacing:0.32em;margin-bottom:14px;}
+.arr-title{font-family:var(--font-d);font-size:clamp(48px,9vw,120px);letter-spacing:0.07em;
+  color:var(--green);text-shadow:0 0 100px rgba(57,255,137,0.5);line-height:0.9;text-align:center;}
+.arr-body{font-family:var(--font-m);font-size:clamp(11px,1.4vw,13px);color:var(--muted);
+  letter-spacing:0.08em;line-height:2;max-width:460px;text-align:center;margin:22px auto 0;}
+.arr-btns{display:flex;gap:16px;margin-top:30px;flex-wrap:wrap;justify-content:center;}
+.btn-primary{font-family:var(--font-d);font-size:18px;letter-spacing:0.16em;color:var(--black);
+  background:linear-gradient(135deg,var(--green),#0ea86b);border:none;padding:14px 44px;border-radius:2px;cursor:none;transition:transform 0.2s;}
+.btn-primary:hover{transform:scale(1.04);}
+.btn-sec{font-family:var(--font-m);font-size:11px;letter-spacing:0.14em;color:var(--muted);
+  background:transparent;border:1px solid rgba(255,255,255,0.12);padding:14px 28px;border-radius:2px;cursor:none;transition:color 0.2s,border-color 0.2s;}
+.btn-sec:hover{color:var(--white);border-color:rgba(255,255,255,0.3);}
+
+.arr-el{opacity:0;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* TRANS */
+#trans-out{position:fixed;inset:0;z-index:80;background:var(--black);opacity:0;pointer-events:none;transition:opacity 1.5s;}
+#trans-out.on{opacity:1;pointer-events:all;}
+</style>
+</head>
+<body>
+<div id="cur-dot"></div><div id="cur-ring"></div>
+<div id="cur-cross-h"></div><div id="cur-cross-v"></div>
+<canvas id="c"></canvas>
+
+<div id="pb-wrap"><div id="pb-fill"></div></div>
+
+<div id="hud-top">
+  <div class="hud-col">
+    <div class="hud-item">VELOCITY: <span id="h-vel">7.9</span> KM/S</div>
+    <div class="hud-item">ALTITUDE: <span id="h-alt">400 KM</span></div>
+    <div class="hud-item" id="h-stat">STATUS: <span>ASCENT PHASE</span></div>
+  </div>
+  <div class="hud-col" style="align-items:flex-end">
+    <div class="hud-item">EARTH DIST: <span id="h-earth">0 KM</span></div>
+    <div class="hud-item">MARS DIST: <span id="h-mars">225,000,000 KM</span></div>
+    <div class="hud-item">FUEL: <span id="h-fuel">100</span>%</div>
+  </div>
+</div>
+
+<div id="day-wrap">
+  <span class="day-lbl">MISSION DAY</span>
+  <div id="day-num">1</div>
+</div>
+
+<div id="ctrl-hint">
+  <div class="ctr"><span class="ckey">↑ W</span><span class="cdesc">THRUST</span></div>
+  <div class="ctr"><span class="ckey">← →</span><span class="cdesc">ROTATE</span></div>
+  <div class="ctr"><span class="ckey">SHIFT</span><span class="cdesc">BOOST</span></div>
+  <div class="ctr"><span class="ckey">SPACE</span><span class="cdesc">BRAKE</span></div>
+</div>
+
+<div id="touch-ctrl">
+  <div id="tch-up" class="tbtn">↑</div>
+  <div class="trow">
+    <div id="tch-l" class="tbtn">←</div>
+    <div id="tch-brk" class="tbtn">⏹</div>
+    <div id="tch-r" class="tbtn">→</div>
+  </div>
+</div>
+
+<div id="phase-banner">
+  <div class="pb-big" id="pb-big">LEAVING EARTH</div>
+  <div class="pb-sub" id="pb-sub">ASCENT CONFIRMED</div>
+</div>
+
+<div id="mars-prox">
+  <div class="mp-tag">PROXIMITY WARNING</div>
+  <div class="mp-big">MARS<br>APPROACHING</div>
+</div>
+
+<div id="tx-bar">
+  <div class="tx-icon">HOUSTON ▶</div>
+  <div id="tx-text">Ares Seven, ignition confirmed. Climb rate nominal. You are GO.</div>
+</div>
+
+<!-- ARRIVAL -->
+<div id="arrival">
+  <div class="arr-tag arr-el" id="arr-tag">MISSION DAY 210 · MARS ORBIT INSERTION</div>
+  <div class="arr-title arr-el" id="arr-title">MARS<br>REACHED</div>
+  <div class="arr-body arr-el" id="arr-body">
+    HOUSTON: "Ares Seven.<br><br>
+    Orbit insertion confirmed.<br>
+    210 days. 225 million kilometres.<br><br>
+    You made it.<br>
+    All six of you."
+  </div>
+  <div class="arr-btns arr-el" id="arr-btns">
+    <button class="btn-primary" id="btn-continue">CONTINUE MISSION →</button>
+    <button class="btn-sec" id="btn-retry">Replay Journey</button>
+  </div>
+</div>
+
+<div id="trans-out"></div>
+
+<script>
+/* ══════════════ CURSOR ══════════════ */
+const curDot=document.getElementById('cur-dot'),curRing=document.getElementById('cur-ring'),
+      curH=document.getElementById('cur-cross-h'),curV=document.getElementById('cur-cross-v');
+let mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function cl(){
+  const s=`left:${mx}px;top:${my}px;`;
+  curDot.style.cssText+=s;curH.style.cssText+=s;curV.style.cssText+=s;
+  rx+=(mx-rx)*0.11;ry+=(my-ry)*0.11;
+  curRing.style.cssText+=`left:${rx}px;top:${ry}px;`;
+  requestAnimationFrame(cl);
+})();
+
+/* ══════════════ TX ══════════════ */
+const txEl=document.getElementById('tx-text');
+let txCurIv=null;
+function showTx(msg){
+  if(txCurIv)clearInterval(txCurIv);
+  txEl.textContent='';let i=0;
+  txCurIv=setInterval(()=>{txEl.textContent+=msg[i++];if(i>=msg.length)clearInterval(txCurIv);},26);
+}
+const TX=[
+  // phase 0 — launch/ascent
+  ["Ares Seven, ignition confirmed. Climb rate nominal. You are GO.",
+   "HOUSTON: Clear the atmosphere. Keep your heading.",
+   "HOUSTON: Max Q passing. Hold steady.",
+   "HOUSTON: Stage separation. You're in orbit. Incredible."],
+  // phase 1 — deep space cruise
+  ["HOUSTON: Trans-Mars injection complete. 210 days ahead.",
+   "HOUSTON: Signal delay is 3.5 minutes now. You're far out.",
+   "HOUSTON: Halfway point. First humans this deep in space.",
+   "HOUSTON: Crew vitals nominal. Mars is no longer just a dot.",
+   "HOUSTON: 60 days out. Final trajectory correction looks clean.",
+   "HOUSTON: Mars gravity pulling at you. You can feel it now."],
+  // phase 2 — mars approach
+  ["HOUSTON: Mars on close approach. Begin deceleration burn.",
+   "HOUSTON: Ares Seven — final approach. You are GO.",
+   "HOUSTON: Orbit insertion in 60 seconds. All systems nominal."],
+];
+let txTimers=[];
+function stopTx(){txTimers.forEach(t=>clearTimeout(t));txTimers=[];}
+function runTxPhase(p){
+  stopTx();
+  const msgs=TX[p]||[];
+  showTx(msgs[0]||'');
+  for(let i=1;i<msgs.length;i++) txTimers.push(setTimeout(()=>showTx(msgs[i]),i*5800));
+}
+
+/* ══════════════ CANVAS ══════════════ */
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+function resize(){cv.width=innerWidth;cv.height=innerHeight;}
+addEventListener('resize',resize);resize();
+
+/* ══════════════ WORLD CONFIG ══════════════ */
+// Journey phases measured in world-Y units (scrollY)
+// Phase 0 (Launch):   0  → P0  — Earth dominant
+// Phase 1 (Cruise):   P0 → P1  — deep space
+// Phase 2 (Approach): P1 → END — Mars grows
+const P0  = 2000;
+const P1  = 10000;
+const END = 12500;  // arrival triggers here
+
+/* ══════════════ ROCKET STATE ══════════════ */
+const rkt={
+  x:0, y:0,          // world position
+  vx:0, vy:-2.4,     // initial upward velocity
+  angle:-Math.PI/2,  // pointing up
+  fuel:100,
+  thrusting:false,
+};
+let scrollY=0;       // follows -rkt.y (increases as rocket goes up)
+let phase=0;
+let gameOver=false;
+let missionDay=1;
+
+/* ══════════════ PROCEDURAL WORLD ══════════════ */
+// Stars — 3 parallax layers
+const LAYERS=[
+  {pts:[],spd:0.04,r:0.6,a:0.3},
+  {pts:[],spd:0.13,r:1.0,a:0.6},
+  {pts:[],spd:0.28,r:1.5,a:0.85},
+];
+(function(){
+  LAYERS.forEach(L=>{
+    for(let i=0;i<220;i++) L.pts.push({bx:Math.random()*4000-2000,by:Math.random()*END*1.4});
+  });
+})();
+
+// Nebula clouds
+const NEBULAS=(function(){
+  const cols=[[180,70,20],[20,80,200],[70,20,160],[150,40,20],[20,120,160]];
+  const out=[];
+  for(let i=0;i<12;i++){
+    const c=cols[i%cols.length];
+    out.push({bx:(Math.random()-0.5)*3000,by:300+Math.random()*(END-500),
+      r:90+Math.random()*240,c,a:0.012+Math.random()*0.025});
+  }
+  return out;
+})();
+
+// Debris rocks
+const ROCKS=(function(){
+  const out=[];
+  for(let i=0;i<50;i++){
+    out.push({bx:(Math.random()-0.5)*3200,by:400+Math.random()*(END-600),
+      r:2+Math.random()*9,sides:4+Math.floor(Math.random()*4),
+      rot:Math.random()*Math.PI*2,rotSpd:(Math.random()-0.5)*0.025});
+  }
+  return out;
+})();
+
+// Engine particles (world-space)
+let engParts=[];
+function spawnEng(){
+  const back=rkt.angle+Math.PI;
+  for(let i=0;i<5;i++){
+    const a=back+(Math.random()-0.5)*0.48;
+    const spd=3+Math.random()*3;
+    engParts.push({
+      wx:rkt.x+Math.cos(back)*24, wy:rkt.y+Math.sin(back)*24,
+      vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
+      r:7+Math.random()*8,life:1,decay:0.026+Math.random()*0.02,
+      type:Math.random()<0.45?'fire':'smoke',
+    });
+  }
+}
+
+/* ══════════════ INPUT ══════════════ */
+const keys={};
+addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space')e.preventDefault();});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+const tch={up:false,l:false,r:false,brk:false};
+['tch-up,up','tch-l,l','tch-r,r','tch-brk,brk'].forEach(s=>{
+  const [id,k]=s.split(',');
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.addEventListener('touchstart',e=>{e.preventDefault();tch[k]=true;},{passive:false});
+  el.addEventListener('touchend',  e=>{e.preventDefault();tch[k]=false;},{passive:false});
+});
+
+/* ══════════════ UPDATE ══════════════ */
+let lastT=0;
+function update(dt){
+  if(gameOver)return;
+  const f=dt*0.06;
+
+  const thrust=keys['ArrowUp']||keys['KeyW']||tch.up;
+  const rotL  =keys['ArrowLeft']||keys['KeyA']||tch.l;
+  const rotR  =keys['ArrowRight']||keys['KeyD']||tch.r;
+  const brake =keys['Space']||tch.brk;
+  const boost =keys['ShiftLeft']||keys['ShiftRight'];
+
+  if(rotL) rkt.angle-=0.038*f;
+  if(rotR) rkt.angle+=0.038*f;
+
+  rkt.thrusting=false;
+  if(thrust&&rkt.fuel>0){
+    const pwr=boost?0.20:0.10;
+    rkt.vx+=Math.cos(rkt.angle)*pwr*f;
+    rkt.vy+=Math.sin(rkt.angle)*pwr*f;
+    rkt.fuel=Math.max(0,rkt.fuel-(boost?0.028:0.011)*f);
+    rkt.thrusting=true;
+    spawnEng();
+    document.getElementById('h-fuel').textContent=Math.round(rkt.fuel);
+    if(rkt.fuel<15) document.getElementById('h-stat').innerHTML='STATUS:<span class="danger"> FUEL CRITICAL</span>';
+  }
+
+  // Auto cruise drift — rocket always moves upward slowly even without input
+  // This gives a sense of ongoing journey
+  const autoThrust=0.015*f;
+  rkt.vy+=Math.cos(rkt.angle+Math.PI/2)*0*f; // no auto sideways
+  if(rkt.vy>-1.2) rkt.vy-=autoThrust;
+
+  if(brake){rkt.vx*=Math.pow(0.92,f);rkt.vy*=Math.pow(0.92,f);}
+
+  // Speed cap
+  const spd=Math.sqrt(rkt.vx**2+rkt.vy**2);
+  const cap=boost?9:5.5;
+  if(spd>cap){rkt.vx=(rkt.vx/spd)*cap;rkt.vy=(rkt.vy/spd)*cap;}
+
+  // Soft center — don't let rocket drift too far horizontally
+  rkt.vx-=rkt.x*0.0004*f;
+  rkt.vx*=Math.pow(0.993,f);
+
+  rkt.x+=rkt.vx*f;
+  rkt.y+=rkt.vy*f;
+
+  // scrollY = distance traveled up from start
+  scrollY=Math.max(0,-rkt.y);
+
+  // Update HUD
+  const prog=Math.min(1,scrollY/END);
+  const targetDay=Math.round(1+prog*209);
+  if(targetDay>missionDay){
+    missionDay=targetDay;
+    document.getElementById('day-num').textContent=missionDay;
+  }
+  const vel=(7.9+spd*0.4+prog*24).toFixed(1);
+  document.getElementById('h-vel').textContent=vel;
+  document.getElementById('h-alt').textContent=prog<0.05
+    ? Math.round(400+prog*800000)+' KM'
+    : (prog*225000).toFixed(0)+',000 KM';
+  document.getElementById('h-earth').textContent=Math.round(prog*225000000).toLocaleString()+' KM';
+  document.getElementById('h-mars').textContent=Math.round((1-prog)*225000000).toLocaleString()+' KM';
+  document.getElementById('pb-fill').style.width=(prog*100)+'%';
+
+  // Phase transitions
+  const newPhase=scrollY<P0?0:scrollY<P1?1:2;
+  if(newPhase!==phase){
+    phase=newPhase;
+    runTxPhase(phase);
+    if(phase===1){
+      flashBanner('DEEP SPACE','TRANS-MARS INJECTION COMPLETE');
+      document.getElementById('h-stat').innerHTML='STATUS: <span>CRUISE PHASE</span>';
+    }
+    if(phase===2){
+      flashBanner('MARS APPROACH','ORBIT INSERTION SEQUENCE ACTIVE');
+      document.getElementById('h-stat').innerHTML='STATUS: <span class="green">MARS APPROACH</span>';
+      const prox=document.getElementById('mars-prox');
+      prox.classList.add('show');
+      setTimeout(()=>prox.classList.remove('show'),4500);
+    }
+  }
+
+  // Engine particles update
+  engParts=engParts.filter(p=>p.life>0);
+  engParts.forEach(p=>{
+    p.wx+=p.vx;p.wy+=p.vy;p.r+=0.3;p.life-=p.decay;
+  });
+  ROCKS.forEach(r=>r.rot+=r.rotSpd);
+
+  // Arrival
+  if(scrollY>=END-80&&!gameOver){
+    gameOver=true;
+    setTimeout(triggerArrival,1200);
+  }
+}
+
+/* ══════════════ DRAW ══════════════ */
+function draw(){
+  const W=cv.width,H=cv.height;
+  const CX=W/2;
+  const ROCKET_SY=H*0.60; // rocket's fixed screen Y
+  const prog=Math.min(1,scrollY/END);
+
+  // World → Screen helpers
+  const wsx=wx=>CX+(wx-rkt.x);
+  const wsy=wy=>ROCKET_SY+(wy-rkt.y);
+
+  // BG: sky fades from deep blue to black over phase 0
+  const atmFrac=Math.min(1,scrollY/600);
+  const bg=ctx.createLinearGradient(0,H,0,0);
+  if(phase===0){
+    bg.addColorStop(0,`rgba(4,12,40,${(1-atmFrac)*0.95})`);
+    bg.addColorStop(0.4,`rgba(6,8,24,${1-atmFrac*0.6})`);
+    bg.addColorStop(1,'#02040A');
+  } else {
+    bg.addColorStop(0,'#02040A');bg.addColorStop(1,'#020408');
+  }
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  // ══ EARTH ══
+  // Earth sits at world position y=600 (below launch point)
+  // As rocket climbs, earth moves down the screen and shrinks
+  {
+    const EARTH_WY=600; // earth center in world Y
+    const eSX=CX; // always centered horizontally
+    const eSY=wsy(EARTH_WY);
+    // radius: starts as big circle filling bottom of screen, shrinks as we leave
+    const distFromEarth=scrollY; // how far above earth surface
+    const baseR=Math.max(W,H)*1.3;
+    const earthR=Math.max(8, baseR - distFromEarth*0.55);
+
+    // Only draw if at least partially on screen
+    if(eSY<H+earthR+20 && earthR>5){
+      // Outer atmosphere shimmer
+      const atmG=ctx.createRadialGradient(eSX,eSY,earthR*0.88,eSX,eSY,earthR*1.18);
+      atmG.addColorStop(0,'rgba(40,100,220,0)');
+      atmG.addColorStop(0.6,`rgba(60,130,240,${(1-prog)*0.18})`);
+      atmG.addColorStop(1,'rgba(40,100,220,0)');
+      ctx.beginPath();ctx.arc(eSX,eSY,earthR*1.18,0,Math.PI*2);
+      ctx.fillStyle=atmG;ctx.fill();
+
+      // Earth body gradient
+      const eg=ctx.createRadialGradient(eSX-earthR*0.22,eSY-earthR*0.22,earthR*0.05,eSX,eSY,earthR);
+      eg.addColorStop(0,'#2060b0');
+      eg.addColorStop(0.25,'#1248a0');
+      eg.addColorStop(0.5,'#1a6644'); // land
+      eg.addColorStop(0.7,'#0e3060');
+      eg.addColorStop(0.88,'#0a2040');
+      eg.addColorStop(1,'#061428');
+      ctx.beginPath();ctx.arc(eSX,eSY,earthR,0,Math.PI*2);
+      ctx.fillStyle=eg;ctx.fill();
+
+      // City lights on dark side
+      if(earthR>50){
+        ctx.save();ctx.globalAlpha=0.08*Math.min(1,earthR/150);
+        ctx.fillStyle='#ffe8a0';
+        for(let i=0;i<18;i++){
+          const a=i*0.8,r2=earthR*(0.3+Math.random()*0.5);
+          ctx.beginPath();
+          ctx.arc(eSX+Math.cos(a)*r2,eSY+Math.sin(a)*r2,Math.random()*2.5+0.5,0,Math.PI*2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Cloud bands
+      if(earthR>30){
+        ctx.save();ctx.globalAlpha=0.09*Math.min(1,earthR/60);
+        ctx.fillStyle='#ddeeff';
+        [[-0.12,0.28,0.42,0.07,-0.18],[0.05,-0.2,0.5,0.065,0.3],[-0.05,0.1,0.36,0.055,0.1]].forEach(([ox,oy,rw,rh,rot])=>{
+          ctx.save();
+          ctx.translate(eSX+ox*earthR,eSY+oy*earthR);
+          ctx.rotate(rot);
+          ctx.beginPath();ctx.ellipse(0,0,rw*earthR,rh*earthR,0,0,Math.PI*2);ctx.fill();
+          ctx.restore();
+        });
+        ctx.restore();
+      }
+
+      // Horizon light (sunlit limb)
+      const limb=ctx.createRadialGradient(eSX,eSY,earthR*0.9,eSX,eSY,earthR*1.02);
+      limb.addColorStop(0,'rgba(80,150,255,0)');
+      limb.addColorStop(0.75,`rgba(80,150,255,${(1-prog)*0.14})`);
+      limb.addColorStop(1,'rgba(80,150,255,0)');
+      ctx.beginPath();ctx.arc(eSX,eSY,earthR*1.02,0,Math.PI*2);
+      ctx.fillStyle=limb;ctx.fill();
+
+      // "EARTH" label when small enough
+      if(earthR<100&&earthR>10){
+        ctx.save();ctx.font='10px "Share Tech Mono",monospace';
+        ctx.fillStyle=`rgba(80,130,220,${Math.min(0.7,(100-earthR)/80)})`;
+        ctx.textAlign='center';ctx.fillText('EARTH',eSX,eSY-earthR-10);ctx.restore();
+      }
+    }
+  }
+
+  // ══ NEBULAS ══
+  NEBULAS.forEach(n=>{
+    const nx=CX+(n.bx-rkt.x)*0.07;
+    const ny=ROCKET_SY+(n.by+rkt.y)*0.09;
+    if(nx<-n.r||nx>W+n.r||ny<-n.r||ny>H+n.r)return;
+    const gr=ctx.createRadialGradient(nx,ny,0,nx,ny,n.r);
+    gr.addColorStop(0,`rgba(${n.c.join(',')},${n.a})`);
+    gr.addColorStop(1,`rgba(${n.c.join(',')},0)`);
+    ctx.beginPath();ctx.arc(nx,ny,n.r,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+  });
+
+  // ══ STARS ══
+  LAYERS.forEach(L=>{
+    ctx.fillStyle=`rgba(237,232,224,${L.a})`;
+    L.pts.forEach(s=>{
+      // parallax: stars at different depths scroll at different rates
+      const sx=((CX+(s.bx-rkt.x)*L.spd)%W+W)%W;
+      // As scrollY increases, stars move downward on screen (world goes up)
+      const sy=((ROCKET_SY+(s.by+rkt.y*L.spd)*L.spd*8)%H+H)%H;
+      ctx.beginPath();ctx.arc(sx,sy,L.r,0,Math.PI*2);ctx.fill();
+    });
+  });
+
+  // ══ ROCKS ══
+  ROCKS.forEach(d=>{
+    const dsx=wsx(d.bx), dsy=wsy(d.by);
+    if(dsx<-30||dsx>W+30||dsy<-30||dsy>H+30)return;
+    ctx.save();ctx.translate(dsx,dsy);ctx.rotate(d.rot);
+    ctx.beginPath();
+    for(let i=0;i<d.sides;i++){
+      const a=((Math.PI*2)/d.sides)*i;
+      i===0?ctx.moveTo(Math.cos(a)*d.r,Math.sin(a)*d.r):ctx.lineTo(Math.cos(a)*d.r,Math.sin(a)*d.r);
+    }
+    ctx.closePath();
+    ctx.fillStyle='rgba(42,38,33,0.75)';ctx.strokeStyle='rgba(90,78,58,0.35)';ctx.lineWidth=0.8;
+    ctx.fill();ctx.stroke();ctx.restore();
+  });
+
+  // ══ MARS ══
+  {
+    const MARS_WY=-(END-300); // Mars world Y (far above origin)
+    const mSX=CX;
+    const mSY=wsy(MARS_WY);
+    const distToMars=Math.max(0,END-scrollY);
+    const marsProgress=1-distToMars/END;
+    // Radius: 0 → tiny speck → fills screen on arrival
+    const marsR=Math.max(2,
+      marsProgress<0.65 ? marsProgress*30 :
+      (marsProgress-0.65)/0.35*Math.max(W,H)*1.1
+    );
+
+    // Mars glow
+    const mg=ctx.createRadialGradient(mSX,mSY,0,mSX,mSY,Math.max(marsR*2.5,20));
+    mg.addColorStop(0,`rgba(184,64,22,${Math.min(0.3,marsProgress*0.45)})`);
+    mg.addColorStop(1,'rgba(184,64,22,0)');
+    ctx.beginPath();ctx.arc(mSX,mSY,Math.max(marsR*2.5,20),0,Math.PI*2);
+    ctx.fillStyle=mg;ctx.fill();
+
+    if(marsR>1.5){
+      // Mars body
+      const marsG=ctx.createRadialGradient(mSX-marsR*0.2,mSY-marsR*0.2,0,mSX,mSY,marsR);
+      marsG.addColorStop(0,'#cc5a22');
+      marsG.addColorStop(0.4,'#a03a10');
+      marsG.addColorStop(0.75,'#7a2208');
+      marsG.addColorStop(1,'#3a0e04');
+      ctx.beginPath();ctx.arc(mSX,mSY,marsR,0,Math.PI*2);ctx.fillStyle=marsG;ctx.fill();
+
+      // Polar ice cap
+      if(marsR>18){
+        ctx.save();ctx.globalAlpha=0.22;ctx.fillStyle='#e0d4c8';
+        ctx.beginPath();ctx.ellipse(mSX,mSY-marsR*0.78,marsR*0.22,marsR*0.1,0,0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      }
+
+      // Surface canyon lines
+      if(marsR>50){
+        ctx.save();ctx.globalAlpha=0.07;ctx.strokeStyle='#3a0800';ctx.lineWidth=marsR*0.035;
+        ctx.beginPath();ctx.ellipse(mSX+marsR*0.1,mSY+marsR*0.12,marsR*0.65,marsR*0.1,-0.15,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();ctx.ellipse(mSX-marsR*0.1,mSY-marsR*0.22,marsR*0.45,marsR*0.075,0.25,0,Math.PI*2);ctx.stroke();
+        ctx.restore();
+      }
+
+      // Atmosphere limb
+      const mLimb=ctx.createRadialGradient(mSX,mSY,marsR*0.88,mSX,mSY,marsR*1.08);
+      mLimb.addColorStop(0,'rgba(184,100,40,0)');
+      mLimb.addColorStop(0.7,`rgba(184,100,40,${Math.min(0.2,marsProgress*0.25)})`);
+      mLimb.addColorStop(1,'rgba(184,100,40,0)');
+      ctx.beginPath();ctx.arc(mSX,mSY,marsR*1.08,0,Math.PI*2);ctx.fillStyle=mLimb;ctx.fill();
+    }
+
+    // "MARS" label — shows when in speck form, hides when it fills screen
+    if(marsR>4&&marsR<80){
+      ctx.save();
+      ctx.font=`${Math.min(11,Math.max(8,marsR*0.8))}px "Share Tech Mono",monospace`;
+      ctx.fillStyle=`rgba(184,64,22,${Math.min(0.8,marsProgress*2.5)})`;
+      ctx.textAlign='center';
+      ctx.fillText('MARS',mSX,mSY-marsR-9);
+      ctx.restore();
+    }
+
+    // Phase 2: dashed approach line
+    if(phase===2&&marsR<H*0.4){
+      const arrowY=ROCKET_SY-40;
+      ctx.save();ctx.setLineDash([4,5]);
+      ctx.strokeStyle=`rgba(57,255,137,${Math.min(0.4,marsProgress)})`;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(CX,arrowY);ctx.lineTo(mSX,mSY);ctx.stroke();
+      ctx.setLineDash([]);
+      // arrowhead
+      ctx.fillStyle=`rgba(57,255,137,${Math.min(0.6,marsProgress)})`;
+      ctx.beginPath();ctx.moveTo(CX,arrowY);
+      ctx.lineTo(CX-6,arrowY+12);ctx.lineTo(CX+6,arrowY+12);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // ══ ENGINE PARTICLES ══
+  engParts.forEach(p=>{
+    const px=wsx(p.wx),py=wsy(p.wy);
+    if(px<-50||px>W+50||py<-50||py>H+50)return;
+    const a=Math.max(0,p.life);
+    const gr=ctx.createRadialGradient(px,py,0,px,py,p.r);
+    if(p.type==='fire'){
+      gr.addColorStop(0,`rgba(255,240,120,${a*0.92})`);
+      gr.addColorStop(0.3,`rgba(232,148,58,${a*0.6})`);
+      gr.addColorStop(1,'rgba(122,34,8,0)');
+    }else{
+      const g=12+Math.floor(a*22);
+      gr.addColorStop(0,`rgba(${g},${g},${g},${a*0.24})`);
+      gr.addColorStop(1,'rgba(0,0,0,0)');
+    }
+    ctx.beginPath();ctx.arc(px,py,p.r,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+  });
+
+  // ══ ROCKET ══
+  ctx.save();
+  ctx.translate(CX,ROCKET_SY);
+  ctx.rotate(rkt.angle);
+
+  // Halo
+  const halo=ctx.createRadialGradient(0,0,8,0,0,60);
+  halo.addColorStop(0,'rgba(79,195,247,0.07)');halo.addColorStop(1,'rgba(79,195,247,0)');
+  ctx.beginPath();ctx.arc(0,0,60,0,Math.PI*2);ctx.fillStyle=halo;ctx.fill();
+
+  // Body
+  ctx.beginPath();ctx.moveTo(28,0);ctx.lineTo(10,-9);ctx.lineTo(-18,-8);ctx.lineTo(-22,0);ctx.lineTo(-18,8);ctx.lineTo(10,9);ctx.closePath();
+  const bgrad=ctx.createLinearGradient(-22,-10,10,10);
+  bgrad.addColorStop(0,'#1a1f2e');bgrad.addColorStop(0.5,'#2e3548');bgrad.addColorStop(1,'#1a1f2e');
+  ctx.fillStyle=bgrad;ctx.strokeStyle='rgba(79,195,247,0.22)';ctx.lineWidth=0.8;ctx.fill();ctx.stroke();
+
+  // Nose
+  ctx.beginPath();ctx.moveTo(28,0);ctx.lineTo(10,-9);ctx.lineTo(10,9);ctx.closePath();
+  ctx.fillStyle='rgba(232,148,58,0.35)';ctx.strokeStyle='#E8943A';ctx.lineWidth=0.7;ctx.fill();ctx.stroke();
+
+  // Window
+  ctx.beginPath();ctx.arc(6,0,4,0,Math.PI*2);
+  ctx.fillStyle='rgba(79,195,247,0.18)';ctx.strokeStyle='rgba(79,195,247,0.5)';ctx.lineWidth=0.6;ctx.fill();ctx.stroke();
+
+  // Fins
+  [[- 14,-8,-26,-20,-22,-8],[-14,8,-26,20,-22,8]].forEach(([x1,y1,x2,y2,x3,y3])=>{
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.lineTo(x3,y3);ctx.closePath();
+    ctx.fillStyle='rgba(232,148,58,0.2)';ctx.strokeStyle='rgba(232,148,58,0.6)';ctx.lineWidth=0.7;ctx.fill();ctx.stroke();
+  });
+
+  // Engine bell
+  ctx.beginPath();ctx.moveTo(-18,-6);ctx.lineTo(-28,-9);ctx.lineTo(-28,9);ctx.lineTo(-18,6);ctx.closePath();
+  ctx.fillStyle='rgba(122,34,8,0.45)';ctx.strokeStyle='rgba(184,64,22,0.6)';ctx.lineWidth=0.8;ctx.fill();ctx.stroke();
+
+  // Flame
+  if(rkt.thrusting){
+    const fl=34+Math.random()*14;
+    const fk=(Math.random()-0.5)*6;
+    const fg=ctx.createRadialGradient(-28,0,0,-28-fl*0.5,fk,fl);
+    fg.addColorStop(0,'rgba(255,240,100,0.95)');fg.addColorStop(0.2,'rgba(232,148,58,0.7)');
+    fg.addColorStop(0.6,'rgba(184,64,22,0.3)');fg.addColorStop(1,'rgba(122,34,8,0)');
+    ctx.beginPath();ctx.moveTo(-28,-5);ctx.lineTo(-28-fl+fk,-2);ctx.lineTo(-28-fl+fk,2);ctx.lineTo(-28,5);ctx.closePath();
+    ctx.fillStyle=fg;ctx.fill();
+    ctx.beginPath();ctx.ellipse(-32,0,7,2.2,0,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.42)';ctx.fill();
+  }
+
+  // Engine glow
+  const eg=ctx.createRadialGradient(-28,0,0,-28,0,18);
+  eg.addColorStop(0,`rgba(232,148,58,${rkt.thrusting?0.48:0.11})`);eg.addColorStop(1,'rgba(232,148,58,0)');
+  ctx.beginPath();ctx.arc(-28,0,18,0,Math.PI*2);ctx.fillStyle=eg;ctx.fill();
+
+  ctx.restore();
+}
+
+/* ══════════════ PHASE BANNER ══════════════ */
+let bannerTimer=null;
+function flashBanner(big,sub){
+  if(bannerTimer)clearTimeout(bannerTimer);
+  document.getElementById('pb-big').textContent=big;
+  document.getElementById('pb-sub').textContent=sub;
+  const el=document.getElementById('phase-banner');
+  el.classList.add('show');
+  bannerTimer=setTimeout(()=>el.classList.remove('show'),3400);
+}
+
+/* ══════════════ ARRIVAL ══════════════ */
+function triggerArrival(){
+  stopTx();
+  showTx('HOUSTON: Orbit insertion confirmed. Ares Seven — you are at Mars. You made it.');
+  const el=document.getElementById('arrival');
+  el.classList.add('show');
+
+  // Stagger in all elements
+  document.querySelectorAll('.arr-el').forEach((e,i)=>{
+    setTimeout(()=>{ e.style.animation=`fadeUp 0.85s ${i*0.18}s ease forwards`; },i*220);
+  });
+
+  document.getElementById('btn-continue').addEventListener('click',()=>{
+    document.getElementById('trans-out').classList.add('on');
+    setTimeout(()=>{ window.location.href='section6.html'; },1500);
+  });
+  document.getElementById('btn-retry').addEventListener('click',()=>location.reload());
+}
+
+/* ══════════════ LOOP ══════════════ */
+function loop(t){
+  const dt=Math.min(t-lastT,50);lastT=t;
+  update(dt);draw();
+  requestAnimationFrame(loop);
+}
+
+// Boot
+setTimeout(()=>flashBanner('LEAVING EARTH','IGNITION CONFIRMED · CLIMB RATE NOMINAL'),700);
+runTxPhase(0);
+requestAnimationFrame(t=>{lastT=t;loop(t);});
+</script>
+</body>
+</html>

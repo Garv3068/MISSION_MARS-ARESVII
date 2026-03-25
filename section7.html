@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journey to Mars — Day 212: First Steps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --black:#02040A;--rust:#7A2208;--mars:#B84016;--flame:#E8943A;
+  --ember:#F5A623;--white:#EDE8E0;--muted:#4A5568;--dim:#2D3748;
+  --accent:#4FC3F7;--green:#39FF89;--marsatmo:#d4612a;--dustred:#c26030;
+  --font-d:"Bebas Neue",sans-serif;--font-b:"Rajdhani",sans-serif;--font-m:"Share Tech Mono",monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#0d0400;cursor:none;user-select:none;}
+
+/* CURSOR */
+#cur-dot{position:fixed;z-index:9999;width:8px;height:8px;background:var(--ember);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);mix-blend-mode:screen;}
+#cur-ring{position:fixed;z-index:9998;width:32px;height:32px;border:1px solid rgba(232,148,58,0.4);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);transition:width 0.2s,height 0.2s;}
+#cur-ring.hover{width:48px;height:48px;border-color:rgba(232,148,58,0.7);}
+
+/* GRAIN */
+body::after{content:"";position:fixed;inset:0;z-index:95;pointer-events:none;opacity:0.18;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");}
+canvas{position:fixed;inset:0;z-index:0;display:block;}
+
+/* PROGRESS */
+#pb-wrap{position:fixed;top:0;left:0;right:0;height:3px;z-index:40;}
+#pb-fill{height:100%;background:linear-gradient(to right,#7A2208,#E8943A,#F5A623);}
+
+/* HUD */
+#hud{position:fixed;top:0;left:0;right:0;z-index:30;padding:16px 28px 32px;
+  background:linear-gradient(to bottom,rgba(13,4,0,0.97),transparent);
+  display:flex;justify-content:space-between;pointer-events:none;}
+.hc{display:flex;flex-direction:column;gap:4px;}
+.hi{font-family:var(--font-m);font-size:clamp(9px,1.1vw,11px);color:rgba(170,120,80,0.72);letter-spacing:0.14em;}
+.hi span{color:var(--ember);}
+.hi .gr{color:var(--green);}
+.hi .rd{color:#ff4444;animation:blink 0.9s infinite;}
+.hi .warn{color:#ffaa00;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* DAY */
+#day-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:31;text-align:center;pointer-events:none;}
+.dl{font-family:var(--font-m);font-size:9px;color:rgba(170,100,60,0.7);letter-spacing:0.28em;display:block;margin-bottom:2px;}
+#day-num{font-family:var(--font-d);font-size:clamp(28px,3.5vw,48px);letter-spacing:0.06em;color:var(--white);line-height:1;}
+
+/* TX BAR */
+#tx-bar{position:fixed;bottom:0;left:0;right:0;z-index:30;padding:10px 28px 16px;
+  background:linear-gradient(to top,rgba(13,4,0,0.98),transparent);
+  display:flex;align-items:flex-start;gap:10px;pointer-events:none;}
+.tx-icon{font-family:var(--font-m);font-size:9px;color:var(--flame);letter-spacing:0.18em;white-space:nowrap;padding-top:2px;flex-shrink:0;}
+#tx-text{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:var(--white);letter-spacing:0.08em;line-height:1.6;}
+
+/* SCREENS */
+.screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 1.4s;}
+.screen.active{opacity:1;pointer-events:all;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SCREEN 1: FIRST STEPS ── */
+#s-firststep{background:transparent;}
+#firststep-overlay{position:fixed;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity 1.8s;}
+#firststep-overlay.show{opacity:1;pointer-events:all;}
+.fs-frame{background:rgba(13,4,0,0.9);border:1px solid rgba(232,148,58,0.18);border-left:3px solid var(--flame);max-width:580px;width:90vw;padding:28px 32px;}
+.fs-tag{font-family:var(--font-m);font-size:9px;color:var(--flame);letter-spacing:0.28em;margin-bottom:8px;}
+.fs-title{font-family:var(--font-d);font-size:clamp(44px,7vw,96px);letter-spacing:0.06em;color:var(--white);line-height:0.88;margin-bottom:16px;}
+.fs-title .accent{color:var(--flame);}
+.fs-body{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:rgba(237,232,224,0.68);letter-spacing:0.06em;line-height:2.1;}
+.fs-body .hl{color:var(--flame);}
+.fs-body .gr{color:var(--green);}
+.fs-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:20px;}
+.fss{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);padding:10px 12px;text-align:center;}
+.fss-n{font-family:var(--font-d);font-size:22px;color:var(--ember);letter-spacing:0.04em;line-height:1;}
+.fss-l{font-family:var(--font-m);font-size:7px;color:var(--muted);letter-spacing:0.16em;margin-top:3px;}
+.fs-btns{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap;}
+.btn-primary{font-family:var(--font-d);font-size:18px;letter-spacing:0.18em;color:var(--black);
+  background:linear-gradient(135deg,var(--flame),var(--mars));border:none;padding:13px 38px;border-radius:2px;cursor:none;transition:transform 0.2s,box-shadow 0.2s;}
+.btn-primary:hover{transform:scale(1.04);box-shadow:0 0 36px rgba(232,148,58,0.45);}
+.btn-sec{font-family:var(--font-m);font-size:11px;letter-spacing:0.14em;color:var(--muted);
+  background:transparent;border:1px solid rgba(255,255,255,0.1);padding:13px 24px;border-radius:2px;cursor:none;transition:color 0.2s,border-color 0.2s;}
+.btn-sec:hover{color:var(--white);border-color:rgba(255,255,255,0.28);}
+
+/* ── SCREEN 2: EVA WALK ── */
+#s-eva{background:transparent;}
+.eva-hud{position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:50;text-align:center;pointer-events:none;}
+.eva-step{font-family:var(--font-d);font-size:clamp(44px,6vw,80px);letter-spacing:0.05em;color:var(--white);line-height:1;}
+.eva-label{font-family:var(--font-m);font-size:9px;color:var(--muted);letter-spacing:0.28em;margin-top:2px;}
+.eva-o2{font-family:var(--font-m);font-size:11px;color:var(--green);letter-spacing:0.2em;margin-top:5px;}
+
+.eva-quote{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:50;
+  pointer-events:none;text-align:center;max-width:500px;width:90vw;opacity:0;transition:opacity 1.2s;}
+.eva-quote.show{opacity:1;}
+.eq-line{font-family:var(--font-m);font-size:clamp(11px,1.5vw,14px);color:rgba(237,232,224,0.55);letter-spacing:0.1em;line-height:2;}
+.eq-line .hl{color:var(--ember);}
+
+/* ── SCREEN 3: BASE CAMP ── */
+#s-base{background:transparent;}
+#base-overlay{position:fixed;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity 1.6s;}
+#base-overlay.show{opacity:1;pointer-events:all;}
+.base-frame{background:rgba(13,4,0,0.91);border:1px solid rgba(232,148,58,0.15);max-width:620px;width:90vw;padding:28px 32px;position:relative;}
+.base-frame::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,var(--rust),var(--flame),transparent);}
+.base-tag{font-family:var(--font-m);font-size:9px;color:var(--green);letter-spacing:0.3em;margin-bottom:8px;}
+.base-title{font-family:var(--font-d);font-size:clamp(38px,6vw,82px);letter-spacing:0.06em;color:var(--white);line-height:0.88;margin-bottom:16px;}
+.base-title .red{color:var(--flame);}
+.base-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.bg-item{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-left:2px solid rgba(232,148,58,0.4);padding:12px 14px;}
+.bg-label{font-family:var(--font-m);font-size:8px;color:var(--muted);letter-spacing:0.22em;margin-bottom:5px;}
+.bg-val{font-family:var(--font-d);font-size:clamp(18px,2.2vw,26px);color:var(--ember);letter-spacing:0.04em;}
+.bg-val .unit{font-family:var(--font-m);font-size:9px;color:var(--muted);}
+.base-body{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:rgba(237,232,224,0.65);letter-spacing:0.06em;line-height:2.1;margin-bottom:20px;}
+.base-body .hl{color:var(--flame);}
+.base-body .gr{color:var(--green);}
+
+/* CHAPTER END card */
+#chapter-end{position:fixed;inset:0;z-index:60;background:rgba(13,4,0,0);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity 1.6s,background 1.6s;}
+#chapter-end.show{opacity:1;pointer-events:all;background:rgba(13,4,0,0.92);}
+.ce-el{opacity:0;}
+.ce-pretag{font-family:var(--font-m);font-size:10px;color:var(--muted);letter-spacing:0.3em;margin-bottom:12px;}
+.ce-title{font-family:var(--font-d);font-size:clamp(48px,9vw,120px);letter-spacing:0.07em;line-height:0.88;text-align:center;margin-bottom:6px;}
+.ce-title .line1{color:var(--white);display:block;}
+.ce-title .line2{color:var(--flame);display:block;}
+.ce-body{font-family:var(--font-m);font-size:clamp(10px,1.3vw,13px);color:var(--muted);letter-spacing:0.08em;line-height:2.1;max-width:460px;text-align:center;margin:20px auto 0;}
+.ce-body .hl{color:var(--ember);}
+.ce-divider{width:60px;height:1px;background:linear-gradient(to right,transparent,var(--flame),transparent);margin:20px auto;}
+.ce-btns{display:flex;gap:16px;margin-top:28px;flex-wrap:wrap;justify-content:center;}
+.btn-end-primary{font-family:var(--font-d);font-size:20px;letter-spacing:0.2em;color:var(--black);
+  background:linear-gradient(135deg,var(--ember),var(--flame));border:none;padding:15px 50px;border-radius:2px;cursor:none;transition:transform 0.2s,box-shadow 0.2s;}
+.btn-end-primary:hover{transform:scale(1.04);box-shadow:0 0 50px rgba(245,166,35,0.5);}
+.btn-end-sec{font-family:var(--font-m);font-size:11px;letter-spacing:0.14em;color:var(--muted);
+  background:transparent;border:1px solid rgba(255,255,255,0.1);padding:15px 28px;border-radius:2px;cursor:none;transition:color 0.2s,border-color 0.2s;}
+.btn-end-sec:hover{color:var(--white);border-color:rgba(255,255,255,0.3);}
+
+/* NOTIFICATION flash */
+#notif{position:fixed;top:72px;right:24px;z-index:50;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.notif-item{font-family:var(--font-m);font-size:9px;color:var(--green);letter-spacing:0.18em;
+  background:rgba(57,255,137,0.06);border:1px solid rgba(57,255,137,0.2);border-left:2px solid var(--green);
+  padding:7px 14px;opacity:0;transform:translateX(20px);transition:opacity 0.5s,transform 0.5s;}
+.notif-item.show{opacity:1;transform:translateX(0);}
+
+/* SCAN LINES */
+body::before{content:"";position:fixed;inset:0;z-index:94;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);
+  opacity:0.5;}
+
+#trans-out{position:fixed;inset:0;z-index:80;background:#0d0400;opacity:0;pointer-events:none;transition:opacity 1.5s;}
+#trans-out.on{opacity:1;pointer-events:all;}
+</style>
+</head>
+<body>
+<div id="cur-dot"></div><div id="cur-ring"></div>
+<canvas id="c"></canvas>
+<div id="pb-wrap"><div id="pb-fill" style="width:100%"></div></div>
+
+<div id="hud">
+  <div class="hc">
+    <div class="hi">TEMPERATURE: <span id="h-temp">-58°C</span></div>
+    <div class="hi">SUIT PRESSURE: <span id="h-suit" class="gr">NOMINAL</span></div>
+    <div class="hi">O₂ RESERVE: <span id="h-o2">98.4%</span></div>
+  </div>
+  <div class="hc" style="align-items:flex-end">
+    <div class="hi">SIGNAL DELAY: <span>11 MIN 22 SEC</span></div>
+    <div class="hi">CREW EVA: <span id="h-eva" class="gr">STANDBY</span></div>
+    <div class="hi">DUST STORM: <span id="h-storm" class="gr">NONE DETECTED</span></div>
+  </div>
+</div>
+<div id="day-wrap"><span class="dl">MISSION DAY</span><div id="day-num">212</div></div>
+
+<!-- NOTIFICATIONS -->
+<div id="notif">
+  <div class="notif-item" id="n1">▶ LANDING STRUTS: SECURED</div>
+  <div class="notif-item" id="n2">▶ AIRLOCK: PRESSURIZED</div>
+  <div class="notif-item" id="n3">▶ EVA SUIT: CALIBRATED</div>
+</div>
+
+<!-- SCREEN 1: FIRST STEPS -->
+<div class="screen active" id="s-firststep">
+  <div id="firststep-overlay">
+    <div class="fs-frame">
+      <div class="fs-tag">DAY 212 · CHRYSE PLANITIA · 22.4°N 49.0°W</div>
+      <div class="fs-title">FIRST<br><span class="accent">STEPS</span></div>
+      <div class="fs-body">
+        Commander Reyes exhales. The hatch seal releases with a hiss that sounds like
+        the breath of the planet itself. <span class="hl">Gravity pulls at 0.38g.</span>
+        The boots touch regolith that no human foot has ever touched.<br><br>
+        Outside: burnt amber sky at solar noon. Rusty plains stretching to volcanic
+        ridges <span class="hl">forty kilometres west.</span>
+        The silence is absolute — no wind right now, no ocean roar, no birds.
+        Just <span class="gr">the crunch of iron-oxide soil under their feet.</span>
+      </div>
+      <div class="fs-stats">
+        <div class="fss"><div class="fss-n">0.38g</div><div class="fss-l">GRAVITY</div></div>
+        <div class="fss"><div class="fss-n">0.6%</div><div class="fss-l">O₂ ATMOSPHERE</div></div>
+        <div class="fss"><div class="fss-n">-58°C</div><div class="fss-l">SURFACE TEMP</div></div>
+      </div>
+      <div class="fs-btns">
+        <button class="btn-primary" id="btn-eva">BEGIN EVA WALK</button>
+        <button class="btn-sec" id="btn-back">← BACK TO LANDING</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: EVA WALK -->
+<div class="screen" id="s-eva">
+  <div class="eva-hud">
+    <div class="eva-step" id="eva-step-count">0</div>
+    <div class="eva-label">STEPS ON MARS</div>
+    <div class="eva-o2" id="eva-o2-live">O₂ 98.4% · SUIT NOMINAL</div>
+  </div>
+  <div class="eva-quote" id="eq1">
+    <div class="eq-line">The regolith sparkles. <span class="hl">Iron oxide and basalt dust</span></div>
+    <div class="eq-line">clinging to every boot print. A record that will last</div>
+    <div class="eq-line">ten thousand years without wind erosion to claim it.</div>
+  </div>
+  <div class="eva-quote" id="eq2" style="bottom:90px;">
+    <div class="eq-line">Reyes looks back at the lander. A silver needle in a</div>
+    <div class="eq-line"><span class="hl">vast red desert</span> — 225 million km from home.</div>
+    <div class="eq-line">And yet, right now, <span class="hl">this is home.</span></div>
+  </div>
+</div>
+
+<!-- SCREEN 3: BASE CAMP -->
+<div class="screen" id="s-base">
+  <div id="base-overlay">
+    <div class="base-frame">
+      <div class="base-tag">ARES SEVEN BASE CAMP · ESTABLISHED</div>
+      <div class="base-title">ARES<br><span class="red">BASE α</span></div>
+      <div class="base-grid">
+        <div class="bg-item">
+          <div class="bg-label">HABITAT PRESSURE</div>
+          <div class="bg-val">101.3 <span class="unit">kPa</span></div>
+        </div>
+        <div class="bg-item">
+          <div class="bg-label">POWER — SOLAR</div>
+          <div class="bg-val">18.4 <span class="unit">kW</span></div>
+        </div>
+        <div class="bg-item">
+          <div class="bg-label">WATER RECLAIM</div>
+          <div class="bg-val">94 <span class="unit">%</span></div>
+        </div>
+        <div class="bg-item">
+          <div class="bg-label">FOOD RESERVE</div>
+          <div class="bg-val">548 <span class="unit">DAYS</span></div>
+        </div>
+      </div>
+      <div class="base-body">
+        The inflatable habitat locks to the lander airlock. Inside:
+        <span class="hl">14.4 square metres of pressurised living space.</span>
+        Not luxurious, but alive. Warm recycled air. The smell of metal and nylon.<br><br>
+        Dr. Yılmaz begins soil analysis. <span class="gr">Perchlorate at expected levels.</span>
+        Engineer Santos starts the MOXIE reactor — slowly pulling oxygen
+        from CO₂, breath by breath, building a reserve.
+        <span class="hl">Mars is being tamed, one molecule at a time.</span>
+      </div>
+      <div class="fs-btns">
+        <button class="btn-primary" id="btn-chapter">→ CONTINUE MISSION</button>
+        <button class="btn-sec" id="btn-eva-back">← BACK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHAPTER END -->
+<div id="chapter-end">
+  <div class="ce-pretag ce-el">MISSION CHAPTER COMPLETE</div>
+  <div class="ce-title ce-el">
+    <span class="line1">WE ARE</span>
+    <span class="line2">MARTIANS</span>
+  </div>
+  <div class="ce-divider ce-el"></div>
+  <div class="ce-body ce-el">
+    Six humans. One pale blue dot <span class="hl">receding</span> in a telescope lens.
+    One rust-red world now beneath their feet.<br><br>
+    The journey took <span class="hl">212 days.</span>
+    The mission has just begun.
+  </div>
+  <div class="ce-btns ce-el">
+    <button class="btn-end-primary" id="btn-next">NEXT CHAPTER →</button>
+    <button class="btn-end-sec" id="btn-restart">↩ FROM LANDING</button>
+  </div>
+</div>
+
+<!-- TX BAR -->
+<div id="tx-bar">
+  <div class="tx-icon">▶ COMMS</div>
+  <div id="tx-text">...</div>
+</div>
+
+<div id="trans-out"></div>
+
+<script>
+/* ────────────────────────────────────────
+   CURSOR
+──────────────────────────────────────── */
+var dot=document.getElementById('cur-dot'),ring=document.getElementById('cur-ring');
+var mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;});
+(function lerpCursor(){
+  rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;
+  dot.style.left=mx+'px';dot.style.top=my+'px';
+  ring.style.left=rx+'px';ring.style.top=ry+'px';
+  requestAnimationFrame(lerpCursor);
+})();
+document.querySelectorAll('button').forEach(function(b){
+  b.addEventListener('mouseenter',function(){ring.classList.add('hover');});
+  b.addEventListener('mouseleave',function(){ring.classList.remove('hover');});
+});
+
+/* ────────────────────────────────────────
+   TX BAR
+──────────────────────────────────────── */
+var txQueue=[],txTimer=null,txActive=false;
+function showTx(msg){
+  var el=document.getElementById('tx-text');
+  el.textContent='';var i=0;
+  if(txTimer)clearInterval(txTimer);
+  txTimer=setInterval(function(){
+    el.textContent+=msg[i++];
+    if(i>=msg.length)clearInterval(txTimer);
+  },28);
+}
+function queueTx(msgs,delay){
+  msgs.forEach(function(m,i){setTimeout(function(){showTx(m);},delay+(i*4000));});
+}
+
+/* ────────────────────────────────────────
+   CANVAS — MARS SURFACE SCENE
+──────────────────────────────────────── */
+var cv=document.getElementById('c');
+var ctx=cv.getContext('2d');
+var W,H,CX,CY;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;CX=W/2;CY=H/2;}
+resize();window.addEventListener('resize',resize);
+
+/* Stars */
+var stars=[];
+function initStars(){
+  stars=[];
+  for(var i=0;i<180;i++){
+    stars.push({x:Math.random()*W,y:Math.random()*H*0.45,r:Math.random()*0.9+0.2,a:Math.random()*0.5+0.1});
+  }
+}
+initStars();
+
+/* Dust particles floating */
+var dustMotes=[];
+for(var d=0;d<60;d++){
+  dustMotes.push({
+    x:Math.random()*1400-200,y:Math.random()*H*0.7,
+    vx:(Math.random()-0.5)*0.18,vy:-(Math.random()*0.06+0.01),
+    r:Math.random()*2+0.4,a:Math.random()*0.18+0.03,
+    wa:Math.random()*Math.PI*2
+  });
+}
+
+/* Footprints */
+var footprints=[];
+var evaSteps=0;
+var evaActive=false;
+var evaStepTimer=null;
+
+function addFootprint(x,y){
+  footprints.push({x:x,y:y,age:0,maxAge:600});
+}
+
+/* Scene phase */
+var scenePhase='surface'; // surface | eva | base
+
+/* Astronaut position for EVA */
+var astro={x:CX,y:0,tx:CX,ty:0,moving:false};
+
+/* Canvas draw */
+var tick=0;
+function drawScene(){
+  tick++;
+  ctx.clearRect(0,0,W,H);
+
+  /* Sky gradient — Mars */
+  var skyH=H*0.52;
+  var sky=ctx.createLinearGradient(0,0,0,skyH);
+  sky.addColorStop(0,'#1a0800');
+  sky.addColorStop(0.3,'#3d1500');
+  sky.addColorStop(0.7,'#7a3010');
+  sky.addColorStop(1,'#c2601a');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,skyH);
+
+  /* Stars (dim through atmosphere haze) */
+  stars.forEach(function(s){
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(237,232,224,'+s.a*0.4+')';ctx.fill();
+  });
+
+  /* Sun — small, pale */
+  var sunX=W*0.72,sunY=H*0.11;
+  var sunG=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,60);
+  sunG.addColorStop(0,'rgba(255,240,200,0.9)');
+  sunG.addColorStop(0.2,'rgba(255,200,120,0.5)');
+  sunG.addColorStop(0.6,'rgba(220,140,60,0.12)');
+  sunG.addColorStop(1,'rgba(220,100,20,0)');
+  ctx.beginPath();ctx.arc(sunX,sunY,60,0,Math.PI*2);ctx.fillStyle=sunG;ctx.fill();
+  ctx.beginPath();ctx.arc(sunX,sunY,5,0,Math.PI*2);ctx.fillStyle='rgba(255,248,220,0.95)';ctx.fill();
+
+  /* Atmospheric haze band */
+  var haze=ctx.createLinearGradient(0,skyH-80,0,skyH+40);
+  haze.addColorStop(0,'rgba(194,96,26,0)');
+  haze.addColorStop(0.5,'rgba(194,96,26,0.25)');
+  haze.addColorStop(1,'rgba(160,70,16,0.0)');
+  ctx.fillStyle=haze;ctx.fillRect(0,skyH-80,W,120);
+
+  /* Distant mountains/ridges */
+  ctx.save();
+  ctx.globalAlpha=0.55;
+  ctx.fillStyle='#5a1e06';
+  ctx.beginPath();ctx.moveTo(0,skyH);
+  var ridgePts=[0,0.12,0.04,0.18,0.09,0.06,0.24,0.14,0.18,0.08,0.34,0.17,0.28,0.1,0.44,0.16,0.36,0.05,0.54,0.15,0.46,0.07,0.62,0.18,0.56,0.08,0.74,0.14,0.66,0.04,0.82,0.12,0.76,0.06,0.9,0.15,0.85,0.06,1.0,0.1];
+  for(var ri=0;ri<ridgePts.length;ri+=2){
+    ctx.lineTo(ridgePts[ri]*W, skyH-ridgePts[ri+1]*H*0.32);
+  }
+  ctx.lineTo(W,skyH);ctx.closePath();ctx.fill();
+
+  /* Second ridge layer */
+  ctx.globalAlpha=0.75;
+  ctx.fillStyle='#7a2e0a';
+  ctx.beginPath();ctx.moveTo(0,skyH);
+  var r2=[0,0,0.08,0.08,0.04,0.04,0.18,0.1,0.12,0.03,0.3,0.09,0.22,0.05,0.42,0.11,0.35,0.03,0.55,0.09,0.48,0.04,0.65,0.1,0.6,0.04,0.75,0.07,0.7,0.03,0.85,0.08,0.8,0.02,0.93,0.06,0.88,0.02,1.0,0.04];
+  for(var ri2=0;ri2<r2.length;ri2+=2){
+    ctx.lineTo(r2[ri2]*W, skyH-r2[ri2+1]*H*0.22);
+  }
+  ctx.lineTo(W,skyH);ctx.closePath();ctx.fill();
+  ctx.restore();
+
+  /* Ground */
+  var gnd=ctx.createLinearGradient(0,skyH,0,H);
+  gnd.addColorStop(0,'#9e3d10');
+  gnd.addColorStop(0.25,'#7a2d0a');
+  gnd.addColorStop(0.6,'#5c200a');
+  gnd.addColorStop(1,'#2e0e04');
+  ctx.fillStyle=gnd;ctx.fillRect(0,skyH,W,H-skyH);
+
+  /* Ground texture — subtle noise bumps */
+  ctx.save();ctx.globalAlpha=0.22;
+  for(var gi=0;gi<18;gi++){
+    var gx=((gi*137+220)%W);
+    var gy=skyH+((gi*91+50)%(H-skyH-40))+20;
+    var gr2=ctx.createRadialGradient(gx,gy,0,gx,gy,40+gi*8);
+    gr2.addColorStop(0,'rgba(180,80,30,0.3)');
+    gr2.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.ellipse(gx,gy,60+gi*6,12+gi*1.5,0,0,Math.PI*2);
+    ctx.fillStyle=gr2;ctx.fill();
+  }
+  ctx.restore();
+
+  /* Ground horizon line */
+  ctx.save();ctx.globalAlpha=0.6;
+  var hl=ctx.createLinearGradient(0,0,W,0);
+  hl.addColorStop(0,'rgba(212,97,42,0)');
+  hl.addColorStop(0.2,'rgba(232,148,58,0.5)');
+  hl.addColorStop(0.8,'rgba(232,148,58,0.5)');
+  hl.addColorStop(1,'rgba(212,97,42,0)');
+  ctx.strokeStyle=hl;ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,skyH);ctx.lineTo(W,skyH);ctx.stroke();
+  ctx.restore();
+
+  /* Rocks */
+  var rocks=[
+    {x:0.12,y:0.72,w:42,h:22,c:'#5c2208'},{x:0.24,y:0.85,w:28,h:14,c:'#6e2a0a'},
+    {x:0.38,y:0.78,w:18,h:9,c:'#7a3010'},{x:0.55,y:0.69,w:52,h:28,c:'#4a1a05'},
+    {x:0.67,y:0.82,w:22,h:11,c:'#6a2208'},{x:0.79,y:0.76,w:34,h:18,c:'#5a1e06'},
+    {x:0.88,y:0.88,w:16,h:8,c:'#7a3010'},{x:0.04,y:0.9,w:20,h:10,c:'#5c2208'},
+    {x:0.44,y:0.91,w:14,h:7,c:'#6a2408'},{x:0.72,y:0.94,w:10,h:5,c:'#7a3010'}
+  ];
+  rocks.forEach(function(r){
+    var rx2=r.x*W, ry2=r.y*H;
+    ctx.save();
+    ctx.fillStyle=r.c;
+    ctx.beginPath();ctx.ellipse(rx2,ry2,r.w,r.h,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=0.5;ctx.stroke();
+    /* highlight */
+    ctx.fillStyle='rgba(200,120,60,0.18)';
+    ctx.beginPath();ctx.ellipse(rx2-r.w*0.22,ry2-r.h*0.28,r.w*0.45,r.h*0.28,0,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  });
+
+  /* Floating dust motes */
+  dustMotes.forEach(function(m){
+    m.x+=m.vx+(Math.sin(tick*0.008+m.wa)*0.12);
+    m.y+=m.vy;
+    if(m.y<-20)m.y=H*0.8;
+    if(m.x>W+50)m.x=-50;if(m.x<-50)m.x=W+50;
+    ctx.beginPath();ctx.arc(m.x,m.y,m.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(194,96,26,'+m.a+')';ctx.fill();
+  });
+
+  /* Lander */
+  drawLander(ctx,W*0.72,H*0.625);
+
+  /* Footprints */
+  footprints.forEach(function(fp){
+    fp.age++;
+    var fa=Math.max(0,1-fp.age/fp.maxAge)*0.55;
+    ctx.save();
+    ctx.fillStyle='rgba(80,25,5,'+fa+')';
+    ctx.beginPath();ctx.ellipse(fp.x,fp.y,5,3,Math.PI/6,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  });
+  footprints=footprints.filter(function(fp){return fp.age<fp.maxAge;});
+
+  /* Astronaut during EVA */
+  if(scenePhase==='eva'){
+    drawAstronaut(ctx,astro.x,astro.y);
+  }
+
+  /* Dust storm shimmer on right horizon (cosmetic) */
+  if(tick%2===0){
+    ctx.save();ctx.globalAlpha=0.03+Math.random()*0.02;
+    var ds=ctx.createLinearGradient(W*0.6,skyH-30,W,skyH+60);
+    ds.addColorStop(0,'rgba(180,80,20,0)');
+    ds.addColorStop(0.5,'rgba(194,96,26,0.4)');
+    ds.addColorStop(1,'rgba(160,60,10,0)');
+    ctx.fillStyle=ds;
+    ctx.fillRect(W*0.6,skyH-30,W*0.4,100);
+    ctx.restore();
+  }
+}
+
+function drawLander(ctx2,lx,ly){
+  ctx2.save();ctx2.translate(lx,ly);
+
+  /* Engine glow */
+  var eg=ctx2.createRadialGradient(0,22,0,0,22,55);
+  eg.addColorStop(0,'rgba(232,148,58,0.18)');eg.addColorStop(1,'rgba(232,148,58,0)');
+  ctx2.beginPath();ctx2.arc(0,22,55,0,Math.PI*2);ctx2.fillStyle=eg;ctx2.fill();
+
+  /* Legs */
+  ctx2.strokeStyle='rgba(150,160,180,0.75)';ctx2.lineWidth=1.8;
+  [[-1,1],[1,1]].forEach(function(s){
+    ctx2.beginPath();ctx2.moveTo(s[0]*7,-10);
+    ctx2.lineTo(s[0]*22,28);
+    ctx2.moveTo(s[0]*22,28);ctx2.lineTo(s[0]*22-4,28);ctx2.lineTo(s[0]*22+4,28);
+    ctx2.stroke();
+  });
+
+  /* Body */
+  ctx2.beginPath();ctx2.moveTo(16,-50);ctx2.lineTo(-16,-50);ctx2.lineTo(-18,20);ctx2.lineTo(18,20);ctx2.closePath();
+  var bg=ctx2.createLinearGradient(-18,-50,18,20);
+  bg.addColorStop(0,'#1e2535');bg.addColorStop(0.5,'#2e3a4e');bg.addColorStop(1,'#1e2535');
+  ctx2.fillStyle=bg;ctx2.strokeStyle='rgba(79,195,247,0.2)';ctx2.lineWidth=0.8;ctx2.fill();ctx2.stroke();
+
+  /* Nose cone */
+  ctx2.beginPath();ctx2.moveTo(-14,-50);ctx2.lineTo(0,-78);ctx2.lineTo(14,-50);ctx2.closePath();
+  ctx2.fillStyle='rgba(232,148,58,0.3)';ctx2.strokeStyle='#E8943A';ctx2.lineWidth=0.8;ctx2.fill();ctx2.stroke();
+
+  /* Window */
+  ctx2.beginPath();ctx2.arc(0,-28,6,0,Math.PI*2);
+  ctx2.fillStyle='rgba(79,195,247,0.22)';ctx2.strokeStyle='rgba(79,195,247,0.55)';ctx2.lineWidth=0.7;ctx2.fill();ctx2.stroke();
+
+  /* Shadow */
+  ctx2.save();ctx2.globalAlpha=0.3;
+  ctx2.fillStyle='rgba(0,0,0,0.5)';
+  ctx2.beginPath();ctx2.ellipse(0,30,30,6,0,0,Math.PI*2);ctx2.fill();
+  ctx2.restore();
+
+  /* Label */
+  ctx2.font='7px "Share Tech Mono",monospace';ctx2.fillStyle='rgba(79,195,247,0.55)';
+  ctx2.textAlign='center';ctx2.fillText('ARES VII',0,45);
+
+  ctx2.restore();
+}
+
+function drawAstronaut(ctx2,ax,ay){
+  ctx2.save();ctx2.translate(ax,ay);
+  var sc=0.9;ctx2.scale(sc,sc);
+
+  /* Shadow */
+  ctx2.fillStyle='rgba(0,0,0,0.25)';
+  ctx2.beginPath();ctx2.ellipse(0,28,14,4,0,0,Math.PI*2);ctx2.fill();
+
+  /* Legs */
+  var legOff=Math.sin(tick*0.09)*3;
+  ctx2.strokeStyle='#c8c8d8';ctx2.lineWidth=4;ctx2.lineCap='round';
+  ctx2.beginPath();ctx2.moveTo(-4,4);ctx2.lineTo(-6+legOff,18);ctx2.lineTo(-7+legOff,28);ctx2.stroke();
+  ctx2.beginPath();ctx2.moveTo(4,4);ctx2.lineTo(6-legOff,18);ctx2.lineTo(7-legOff,28);ctx2.stroke();
+  /* Boots */
+  ctx2.fillStyle='#8888a0';
+  ctx2.beginPath();ctx2.ellipse(-7+legOff,29,5,3,0.2,0,Math.PI*2);ctx2.fill();
+  ctx2.beginPath();ctx2.ellipse(7-legOff,29,5,3,-0.2,0,Math.PI*2);ctx2.fill();
+
+  /* Body suit */
+  ctx2.fillStyle='#d8dae8';
+  ctx2.beginPath();ctx2.roundRect(-10,-12,20,22,4);ctx2.fill();
+  ctx2.strokeStyle='rgba(79,195,247,0.3)';ctx2.lineWidth=0.7;ctx2.stroke();
+
+  /* Backpack/life support */
+  ctx2.fillStyle='#b0b2c0';
+  ctx2.beginPath();ctx2.rect(-13,-10,5,14);ctx2.fill();
+
+  /* Arms */
+  var armOff=Math.sin(tick*0.09+1)*4;
+  ctx2.strokeStyle='#c0c2d2';ctx2.lineWidth=4;ctx2.lineCap='round';
+  ctx2.beginPath();ctx2.moveTo(-10,-6);ctx2.lineTo(-16,4+armOff);ctx2.lineTo(-14,14+armOff);ctx2.stroke();
+  ctx2.beginPath();ctx2.moveTo(10,-6);ctx2.lineTo(16,4-armOff);ctx2.lineTo(14,14-armOff);ctx2.stroke();
+  /* Gloves */
+  ctx2.fillStyle='#888898';
+  ctx2.beginPath();ctx2.arc(-14,15+armOff,3.5,0,Math.PI*2);ctx2.fill();
+  ctx2.beginPath();ctx2.arc(14,15-armOff,3.5,0,Math.PI*2);ctx2.fill();
+
+  /* Helmet */
+  ctx2.fillStyle='#d8dae8';
+  ctx2.beginPath();ctx2.arc(0,-20,13,0,Math.PI*2);ctx2.fill();
+  ctx2.strokeStyle='rgba(79,195,247,0.25)';ctx2.lineWidth=0.7;ctx2.stroke();
+  /* Visor */
+  var vis=ctx2.createLinearGradient(-7,-26,7,-14);
+  vis.addColorStop(0,'rgba(200,180,80,0.7)');
+  vis.addColorStop(0.5,'rgba(240,220,100,0.45)');
+  vis.addColorStop(1,'rgba(180,140,50,0.6)');
+  ctx2.fillStyle=vis;
+  ctx2.beginPath();ctx2.ellipse(0,-20,8,7,0,0,Math.PI*2);ctx2.fill();
+  /* Visor reflection */
+  ctx2.fillStyle='rgba(255,255,200,0.35)';
+  ctx2.beginPath();ctx2.ellipse(-3,-23,3,2,-0.3,0,Math.PI*2);ctx2.fill();
+
+  ctx2.restore();
+}
+
+/* ────────────────────────────────────────
+   LOOP
+──────────────────────────────────────── */
+(function loop(){
+  drawScene();
+  requestAnimationFrame(loop);
+})();
+
+/* ────────────────────────────────────────
+   HUD LIVE UPDATE
+──────────────────────────────────────── */
+setInterval(function(){
+  var t=-58+Math.round((Math.random()-0.5)*4);
+  document.getElementById('h-temp').textContent=t+'°C';
+  var o2=(98.4-evaSteps*0.0012).toFixed(1);
+  document.getElementById('h-o2').textContent=o2+'%';
+  if(evaActive){
+    document.getElementById('h-eva').textContent='ACTIVE';
+    document.getElementById('h-eva').className='gr';
+  }
+},2000);
+
+/* ────────────────────────────────────────
+   PHASE MANAGEMENT
+──────────────────────────────────────── */
+var phases=['firststep','eva','base','end'];
+var currentPhase=0;
+
+function showPhase(p){
+  switch(p){
+    case 0: // first step
+      scenePhase='surface';
+      setTimeout(function(){
+        document.getElementById('firststep-overlay').classList.add('show');
+      },900);
+      showNotifications();
+      queueTx([
+        'HOUSTON: Ares Seven — you are on the surface. All telemetry nominal. We are watching live. The whole world is.',
+        'REYES: First footprint confirmed. Regolith is firm. Suit integrity 100%. God, it\'s beautiful out here.',
+        'HOUSTON: Copy that, Commander. History is being made. Take your time.'
+      ],800);
+      break;
+    case 1: // EVA
+      scenePhase='eva';
+      document.getElementById('s-firststep').classList.remove('active');
+      document.getElementById('s-eva').classList.add('active');
+      document.getElementById('firststep-overlay').classList.remove('show');
+      astro.x=W*0.72;astro.y=H*0.655;
+      startEVA();
+      break;
+    case 2: // base
+      scenePhase='base';
+      document.getElementById('s-eva').classList.remove('active');
+      document.getElementById('s-base').classList.add('active');
+      if(evaStepTimer)clearInterval(evaStepTimer);
+      setTimeout(function(){
+        document.getElementById('base-overlay').classList.add('show');
+      },800);
+      queueTx([
+        'HOUSTON: Base camp inflation sequence complete. Habitat pressure nominal. Begin sample collection at your discretion.',
+        'SANTOS: MOXIE is running. We\'re making oxygen from Martian air. First breath of Mars-made O₂ in... thirty minutes.',
+        'YILMAZ: Soil sample Alpha-1 collected. Sending spectrograph data now.'
+      ],600);
+      break;
+    case 3: // chapter end
+      showChapterEnd();
+      break;
+  }
+}
+
+function showNotifications(){
+  var ids=['n1','n2','n3'];
+  ids.forEach(function(id,i){
+    setTimeout(function(){
+      var el=document.getElementById(id);
+      el.classList.add('show');
+      setTimeout(function(){el.classList.remove('show');},3500);
+    },i*900+600);
+  });
+}
+
+function startEVA(){
+  evaActive=true;
+  evaSteps=0;
+  astro.x=W*0.72;astro.y=H*0.655;
+
+  showTx('REYES: I am walking on Mars. Each step — the dust goes up and settles slowly in the low gravity. It is... surreal.');
+  setTimeout(function(){document.getElementById('eq1').classList.add('show');},2000);
+
+  evaStepTimer=setInterval(function(){
+    evaSteps++;
+    document.getElementById('eva-step-count').textContent=evaSteps;
+    document.getElementById('eva-o2-live').textContent='O₂ '+(98.4-evaSteps*0.012).toFixed(1)+'% · SUIT NOMINAL';
+
+    /* Move astronaut */
+    astro.x+=((Math.random()-0.3)*2.2);
+    astro.y+=(Math.sin(evaSteps*0.3)*0.5);
+    astro.x=Math.max(W*0.12,Math.min(W*0.88,astro.x));
+    astro.y=Math.max(H*0.62,Math.min(H*0.72,astro.y));
+
+    /* Leave footprints every 2 steps */
+    if(evaSteps%2===0){
+      addFootprint(astro.x+(Math.random()-0.5)*6, astro.y+24+(Math.random()-0.5)*3);
+    }
+
+    if(evaSteps===18){
+      document.getElementById('eq1').classList.remove('show');
+      setTimeout(function(){document.getElementById('eq2').classList.add('show');},600);
+      showTx('YILMAZ: Distance from lander — 42 metres. First rock sample retrieved. Basaltic composition confirmed.');
+    }
+    if(evaSteps===35){
+      document.getElementById('eq2').classList.remove('show');
+      showTx('REYES: Beginning return to lander. EVA duration — 38 minutes. All crew nominal. Transitioning to base camp setup.');
+    }
+    if(evaSteps>=50){
+      clearInterval(evaStepTimer);
+      evaActive=false;
+      setTimeout(function(){showPhase(2);},1200);
+    }
+  },320);
+}
+
+function showChapterEnd(){
+  document.getElementById('s-base').classList.remove('active');
+  document.getElementById('base-overlay').classList.remove('show');
+  var ce=document.getElementById('chapter-end');
+  ce.classList.add('show');
+  var els=document.querySelectorAll('.ce-el');
+  els.forEach(function(e,i){
+    setTimeout(function(){
+      e.style.animation='fadeUp 0.9s '+(i*0.18)+'s ease forwards';
+    },i*260);
+  });
+  showTx('HOUSTON: Ares Seven — base camp established. Mission Phase One complete. The planet is yours.');
+}
+
+/* ────────────────────────────────────────
+   BUTTON EVENTS
+──────────────────────────────────────── */
+document.getElementById('btn-eva').addEventListener('click',function(){showPhase(1);});
+document.getElementById('btn-back').addEventListener('click',function(){
+  document.getElementById('trans-out').classList.add('on');
+  setTimeout(function(){window.location.href='section6.html';},1500);
+});
+document.getElementById('btn-chapter').addEventListener('click',function(){showPhase(3);});
+document.getElementById('btn-eva-back').addEventListener('click',function(){
+  document.getElementById('base-overlay').classList.remove('show');
+  document.getElementById('s-base').classList.remove('active');
+  showPhase(1);
+});
+document.getElementById('btn-next').addEventListener('click',function(){
+  document.getElementById('trans-out').classList.add('on');
+  setTimeout(function(){window.location.href='section8.html';},1500);
+});
+document.getElementById('btn-restart').addEventListener('click',function(){
+  document.getElementById('trans-out').classList.add('on');
+  setTimeout(function(){window.location.href='section6.html';},1500);
+});
+
+/* BOOT */
+showPhase(0);
+</script>
+</body>
+</html>

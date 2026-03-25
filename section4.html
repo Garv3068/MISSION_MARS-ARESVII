@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journey to Mars — Day 1: Launch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:  #02040A;
+  --deep:   #05080F;
+  --rust:   #7A2208;
+  --mars:   #B84016;
+  --flame:  #E8943A;
+  --ember:  #F5A623;
+  --white:  #EDE8E0;
+  --muted:  #4A5568;
+  --dim:    #2D3748;
+  --accent: #4FC3F7;
+  --green:  #39FF89;
+  --font-d: 'Bebas Neue', sans-serif;
+  --font-b: 'Rajdhani', sans-serif;
+  --font-m: 'Share Tech Mono', monospace;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--black);
+  cursor: none;
+}
+
+/* ── CURSOR ── */
+#cur-dot {
+  position: fixed; z-index: 9999; width: 8px; height: 8px;
+  background: var(--ember); border-radius: 50%;
+  pointer-events: none; transform: translate(-50%,-50%);
+  mix-blend-mode: screen;
+}
+#cur-ring {
+  position: fixed; z-index: 9998; width: 32px; height: 32px;
+  border: 1px solid rgba(232,148,58,0.4); border-radius: 50%;
+  pointer-events: none; transform: translate(-50%,-50%);
+  transition: width 0.15s, height 0.15s;
+}
+
+/* ── GRAIN ── */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 90;
+  pointer-events: none; opacity: 0.15;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* ── STARS ── */
+#stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+/* ── LAUNCH PAD CANVAS ── */
+#pad-canvas {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+}
+
+/* ─────────────────────────────────
+   MAIN LAYOUT
+───────────────────────────────── */
+#main {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+#main.visible { opacity: 1; }
+
+/* ── LEFT PANEL: HUD / mission data ── */
+#left-hud {
+  width: clamp(220px, 22vw, 300px);
+  background: rgba(2,4,10,0.92);
+  border-right: 1px solid rgba(232,148,58,0.1);
+  display: flex; flex-direction: column;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.hud-header {
+  padding: 22px 22px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.hud-day-tag {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--flame); letter-spacing: 0.28em;
+  margin-bottom: 6px;
+}
+.hud-title {
+  font-family: var(--font-d); font-size: 28px;
+  letter-spacing: 0.08em; color: var(--white);
+  line-height: 1;
+}
+.hud-title span { color: var(--flame); }
+
+.hud-section {
+  padding: 14px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.hud-section-title {
+  font-family: var(--font-m); font-size: 8px;
+  color: var(--muted); letter-spacing: 0.24em;
+  margin-bottom: 10px;
+}
+.hud-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 7px;
+}
+.hud-label {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--muted); letter-spacing: 0.1em;
+}
+.hud-value {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--white); letter-spacing: 0.12em;
+}
+.hud-value.green  { color: var(--green); }
+.hud-value.orange { color: var(--flame); }
+.hud-value.red    { color: #ff4444; }
+
+/* parts checklist */
+.part-check {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+}
+.check-icon {
+  width: 14px; height: 14px;
+  border: 1px solid var(--dim);
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; flex-shrink: 0;
+}
+.check-icon.ok   { border-color: var(--green); color: var(--green); background: rgba(57,255,137,0.08); }
+.check-icon.miss { border-color: #ff4444;     color: #ff4444;      background: rgba(255,68,68,0.08); }
+.check-label {
+  font-family: var(--font-m); font-size: 8px;
+  color: var(--muted); letter-spacing: 0.1em;
+}
+.check-label.ok   { color: rgba(57,255,137,0.8); }
+.check-label.miss { color: rgba(255,68,68,0.7); }
+
+/* countdown */
+.countdown-wrap {
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.countdown-label {
+  font-family: var(--font-m); font-size: 8px;
+  color: var(--muted); letter-spacing: 0.24em; margin-bottom: 6px;
+}
+#countdown-display {
+  font-family: var(--font-d); font-size: 48px;
+  letter-spacing: 0.04em;
+  color: var(--flame);
+  line-height: 1;
+  transition: color 0.5s;
+}
+#countdown-display.urgent { color: #ff4444; }
+#countdown-display.go     { color: var(--green); }
+
+/* TX log */
+.tx-log {
+  flex: 1; padding: 14px 22px;
+  overflow: hidden;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.tx-log-title {
+  font-family: var(--font-m); font-size: 8px;
+  color: var(--muted); letter-spacing: 0.24em;
+  margin-bottom: 4px; flex-shrink: 0;
+}
+.tx-entry {
+  font-family: var(--font-m); font-size: 9px;
+  color: rgba(237,232,224,0.55); letter-spacing: 0.06em;
+  line-height: 1.6;
+  border-left: 1px solid var(--dim); padding-left: 8px;
+  opacity: 0;
+  animation: fadeSlideIn 0.5s ease forwards;
+}
+.tx-entry.houston { border-left-color: var(--flame); color: rgba(232,148,58,0.8); }
+.tx-entry.system  { border-left-color: var(--accent); color: rgba(79,195,247,0.7); }
+.tx-entry.alert   { border-left-color: #ff4444; color: rgba(255,68,68,0.8); }
+@keyframes fadeSlideIn {
+  from { opacity:0; transform: translateX(-8px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+/* launch button */
+.launch-btn-wrap {
+  padding: 16px 22px 22px;
+}
+#btn-launch {
+  width: 100%;
+  font-family: var(--font-d); font-size: 20px;
+  letter-spacing: 0.18em; color: var(--black);
+  background: linear-gradient(135deg, var(--flame), var(--mars));
+  border: none; padding: 14px 0;
+  border-radius: 2px;
+  cursor: none;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
+  position: relative; overflow: hidden;
+}
+#btn-launch::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.14), transparent);
+}
+#btn-launch:hover:not(:disabled) {
+  transform: scale(1.03);
+  box-shadow: 0 0 40px rgba(232,148,58,0.5);
+}
+#btn-launch:disabled { opacity: 0.3; }
+
+/* ── CENTER: ROCKET SHOWCASE ── */
+#rocket-stage {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* launch pad ground */
+#ground-line {
+  position: absolute; bottom: 18%; left: 0; right: 0;
+  height: 1px; background: rgba(232,148,58,0.12);
+  display: flex; align-items: center; justify-content: center;
+}
+.ground-text {
+  font-family: var(--font-m); font-size: 8px;
+  color: rgba(232,148,58,0.25); letter-spacing: 0.3em;
+  background: var(--black); padding: 0 12px;
+}
+
+/* rocket wrapper - animates up on launch */
+#rocket-wrap {
+  position: absolute;
+  bottom: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(140px, 18vw, 240px);
+  transition: bottom 2.8s cubic-bezier(0.3,0,0.1,1), opacity 1.8s 1s, transform 2.8s cubic-bezier(0.3,0,0.1,1);
+  filter: drop-shadow(0 0 30px rgba(232,148,58,0.15));
+}
+#rocket-wrap.launching {
+  bottom: 140%;
+  opacity: 0;
+  transform: translateX(-50%) scaleX(0.85);
+}
+#rocket-svg-container {
+  width: 100%;
+}
+
+/* plume trail on ground */
+#plume-canvas {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: clamp(200px, 30vw, 400px);
+  height: 35%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+#plume-canvas.active { opacity: 1; }
+
+/* ── Labels / crosshairs around rocket ── */
+.rocket-label {
+  position: absolute;
+  font-family: var(--font-m); font-size: 9px;
+  color: rgba(79,195,247,0.4); letter-spacing: 0.14em;
+  display: flex; align-items: center; gap: 6px;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+.rocket-label::before {
+  content: ''; width: 24px; height: 1px;
+  background: rgba(79,195,247,0.3);
+}
+#lbl-nose  { top: 14%;  right: calc(50% + clamp(80px,10vw,140px)); }
+#lbl-fuel  { top: 44%;  right: calc(50% + clamp(80px,10vw,140px)); }
+#lbl-eng   { top: 74%;  right: calc(50% + clamp(80px,10vw,140px)); }
+#lbl-fin   { top: 62%;  left: calc(50% + clamp(80px,10vw,140px)); flex-direction: row-reverse; }
+#lbl-fin::before { order: 2; }
+
+/* center targeting reticle */
+#reticle {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(260px, 36vw, 480px);
+  height: clamp(380px, 65vh, 620px);
+  border: 1px solid rgba(79,195,247,0.06);
+  border-radius: 4px;
+  pointer-events: none;
+}
+.ret-corner {
+  position: absolute; width: 16px; height: 16px;
+}
+.ret-tl { top: -1px; left: -1px;   border-top: 1px solid rgba(79,195,247,0.3); border-left: 1px solid rgba(79,195,247,0.3); }
+.ret-tr { top: -1px; right: -1px;  border-top: 1px solid rgba(79,195,247,0.3); border-right: 1px solid rgba(79,195,247,0.3); }
+.ret-bl { bottom: -1px; left: -1px;  border-bottom: 1px solid rgba(79,195,247,0.3); border-left: 1px solid rgba(79,195,247,0.3); }
+.ret-br { bottom: -1px; right: -1px; border-bottom: 1px solid rgba(79,195,247,0.3); border-right: 1px solid rgba(79,195,247,0.3); }
+.ret-tag {
+  position: absolute; font-family: var(--font-m); font-size: 8px;
+  color: rgba(79,195,247,0.3); letter-spacing: 0.18em;
+}
+.ret-tag.tl { top: 4px; left: 20px; }
+.ret-tag.br { bottom: 4px; right: 20px; }
+
+/* countdown overlay during launch */
+#launch-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(2,4,10,0);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s, background 0.6s;
+}
+#launch-overlay.active {
+  opacity: 1; pointer-events: all;
+  background: rgba(2,4,10,0.85);
+}
+.lo-tag {
+  font-family: var(--font-m); font-size: 11px;
+  color: var(--flame); letter-spacing: 0.3em;
+  margin-bottom: 12px;
+}
+#lo-count {
+  font-family: var(--font-d); font-size: clamp(100px,18vw,220px);
+  letter-spacing: 0.04em; line-height: 0.9;
+  color: var(--white);
+  text-shadow: 0 0 80px rgba(232,148,58,0.5);
+  transition: color 0.3s;
+}
+#lo-count.go { color: var(--green); text-shadow: 0 0 100px rgba(57,255,137,0.6); }
+.lo-sub {
+  font-family: var(--font-m); font-size: 13px;
+  color: var(--muted); letter-spacing: 0.22em;
+  margin-top: 16px;
+}
+
+/* flash */
+#flash {
+  position: fixed; inset: 0; z-index: 70;
+  background: #fff; opacity: 0; pointer-events: none;
+  transition: opacity 0.1s;
+}
+
+/* ── RIGHT PANEL: mission brief ── */
+#right-panel {
+  width: clamp(220px, 22vw, 300px);
+  background: rgba(2,4,10,0.92);
+  border-left: 1px solid rgba(232,148,58,0.1);
+  display: flex; flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.rp-header {
+  padding: 22px 22px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.rp-tag {
+  font-family: var(--font-m); font-size: 8px;
+  color: var(--muted); letter-spacing: 0.26em; margin-bottom: 6px;
+}
+.rp-title {
+  font-family: var(--font-d); font-size: 22px;
+  letter-spacing: 0.06em; color: var(--white); line-height: 1.1;
+}
+
+.rp-section {
+  padding: 14px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.rp-section-title {
+  font-family: var(--font-m); font-size: 8px;
+  color: var(--muted); letter-spacing: 0.24em; margin-bottom: 8px;
+}
+.rp-body {
+  font-family: var(--font-m); font-size: 10px;
+  color: rgba(237,232,224,0.55); letter-spacing: 0.06em;
+  line-height: 1.8;
+}
+.rp-body .hl { color: var(--flame); }
+.rp-body .ac { color: var(--accent); }
+
+/* mission stats */
+.ms-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; padding: 14px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.ms-cell {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 10px 12px; border-radius: 2px;
+  text-align: center;
+}
+.ms-num {
+  font-family: var(--font-d); font-size: 22px;
+  color: var(--flame); letter-spacing: 0.04em;
+  line-height: 1;
+}
+.ms-lbl {
+  font-family: var(--font-m); font-size: 7px;
+  color: var(--muted); letter-spacing: 0.16em; margin-top: 4px;
+}
+
+/* perf score */
+.perf-wrap {
+  padding: 14px 22px;
+}
+.perf-title {
+  font-family: var(--font-m); font-size: 8px;
+  color: var(--muted); letter-spacing: 0.24em; margin-bottom: 8px;
+}
+.perf-bar-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.perf-bar-label {
+  font-family: var(--font-m); font-size: 8px;
+  color: var(--muted); letter-spacing: 0.1em;
+  width: 60px; flex-shrink: 0;
+}
+.perf-track {
+  flex: 1; height: 3px;
+  background: rgba(255,255,255,0.05); border-radius: 2px;
+  overflow: hidden;
+}
+.perf-fill {
+  height: 100%; border-radius: 2px;
+  background: linear-gradient(to right, var(--rust), var(--flame));
+  transition: width 1.4s ease 0.5s;
+}
+.perf-val {
+  font-family: var(--font-m); font-size: 8px;
+  color: var(--ember); letter-spacing: 0.1em;
+  width: 30px; text-align: right; flex-shrink: 0;
+}
+
+/* proceed */
+.rp-proceed {
+  margin-top: auto;
+  padding: 16px 22px 22px;
+}
+#btn-proceed {
+  width: 100%;
+  font-family: var(--font-m); font-size: 10px;
+  letter-spacing: 0.18em; color: var(--muted);
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 12px 0; border-radius: 2px;
+  cursor: none;
+  transition: color 0.2s, border-color 0.2s;
+}
+#btn-proceed:hover { color: var(--white); border-color: rgba(255,255,255,0.3); }
+
+/* ── TOP BAR ── */
+#top-bar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 3px; z-index: 50;
+  background: rgba(255,255,255,0.03);
+}
+#top-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--rust), var(--flame), var(--ember));
+  transition: width 0.4s ease;
+}
+
+/* transition */
+#trans-out {
+  position: fixed; inset: 0; z-index: 80;
+  background: var(--black); opacity: 0; pointer-events: none;
+  transition: opacity 1.5s;
+}
+#trans-out.on { opacity: 1; pointer-events: all; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+/* ── MOBILE ── */
+@media(max-width: 700px){
+  #left-hud, #right-panel { display: none; }
+  #rocket-wrap { width: clamp(100px,40vw,180px); }
+}
+
+/* ── SMOKE CANVAS ── */
+#smoke-canvas {
+  position: fixed; inset: 0; z-index: 2;
+  pointer-events: none;
+  opacity: 0.3; /* Subtle base opacity */
+  transition: opacity 2s ease;
+}
+
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+<canvas id="pad-canvas"></canvas>
+<canvas id="smoke-canvas"></canvas> 
+<canvas id="plume-canvas"></canvas>
+
+<div id="cur-dot"></div>
+<div id="cur-ring"></div>
+
+<canvas id="stars"></canvas>
+<canvas id="pad-canvas"></canvas>
+<canvas id="plume-canvas"></canvas>
+<div id="top-bar"><div id="top-bar-fill" style="width:0%"></div></div>
+
+<!-- ══ MAIN ══ -->
+<div id="main">
+
+  <!-- LEFT HUD -->
+  <div id="left-hud">
+    <div class="hud-header">
+      <div class="hud-day-tag">MISSION DAY 1 · LAUNCH SEQUENCE</div>
+      <div class="hud-title">ARES <span>VII</span></div>
+    </div>
+
+    <div class="hud-section">
+      <div class="hud-section-title">VEHICLE STATUS</div>
+      <div class="hud-row">
+        <span class="hud-label">DESIGNATION</span>
+        <span class="hud-value orange">ARES-VII-01</span>
+      </div>
+      <div class="hud-row">
+        <span class="hud-label">CREW</span>
+        <span class="hud-value green">6 OF 6</span>
+      </div>
+      <div class="hud-row">
+        <span class="hud-label">ASSEMBLY</span>
+        <span class="hud-value" id="stat-assembly">–</span>
+      </div>
+      <div class="hud-row">
+        <span class="hud-label">BUILD TIME</span>
+        <span class="hud-value" id="stat-time">–</span>
+      </div>
+    </div>
+
+    <div class="hud-section">
+      <div class="hud-section-title">COMPONENT MANIFEST</div>
+      <div id="parts-checklist">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <div class="countdown-wrap">
+      <div class="countdown-label">T-MINUS · LAUNCH WINDOW</div>
+      <div id="countdown-display">T–30</div>
+    </div>
+
+    <div class="tx-log" id="tx-log">
+      <div class="tx-log-title">COMMS LOG</div>
+      <!-- tx entries injected -->
+    </div>
+
+    <div class="launch-btn-wrap">
+      <button id="btn-launch" disabled>IGNITION SEQUENCE</button>
+    </div>
+  </div>
+
+  <!-- CENTER STAGE -->
+  <div id="rocket-stage">
+    <div id="reticle">
+      <div class="ret-corner ret-tl"></div>
+      <div class="ret-corner ret-tr"></div>
+      <div class="ret-corner ret-bl"></div>
+      <div class="ret-corner ret-br"></div>
+      <div class="ret-tag tl">TARGET: MARS · 225M KM</div>
+      <div class="ret-tag br">MET 00:00:00</div>
+    </div>
+
+    <!-- Part labels -->
+    <div class="rocket-label" id="lbl-nose">NOSE CONE</div>
+    <div class="rocket-label" id="lbl-fuel">FUEL TANK</div>
+    <div class="rocket-label" id="lbl-eng">ENGINE BELL</div>
+    <div class="rocket-label" id="lbl-fin">FIN ARRAY</div>
+
+    <!-- The rocket itself -->
+    <div id="rocket-wrap">
+      <div id="rocket-svg-container">
+        <!-- SVG injected by JS -->
+      </div>
+    </div>
+
+    <div id="ground-line">
+      <span class="ground-text">LAUNCH PAD 39A · KSC · 28.6°N 80.6°W</span>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div class="rp-header">
+      <div class="rp-tag">MISSION BRIEF · DAY 1</div>
+      <div class="rp-title">YOUR<br>ROCKET</div>
+    </div>
+
+    <div class="rp-section">
+      <div class="rp-section-title">HOUSTON TRANSMISSION</div>
+      <div class="rp-body" id="rp-tx">
+        <span class="hl">HOUSTON:</span> "Ares Seven.<br><br>
+        Vehicle assembled. <span class="ac" id="rp-parts-count">—</span> components locked.<br><br>
+        We have a <span class="hl" id="rp-window">90-second</span> launch window.<br><br>
+        You built this. You're flying it.<br><br>
+        <span class="hl">T-minus 30. Stand by."</span>
+      </div>
+    </div>
+
+    <div class="ms-grid">
+      <div class="ms-cell">
+        <div class="ms-num" id="ms-parts">—</div>
+        <div class="ms-lbl">PARTS LOCKED</div>
+      </div>
+      <div class="ms-cell">
+        <div class="ms-num" id="ms-time">—</div>
+        <div class="ms-lbl">SECONDS USED</div>
+      </div>
+      <div class="ms-cell">
+        <div class="ms-num">210</div>
+        <div class="ms-lbl">DAYS TO MARS</div>
+      </div>
+      <div class="ms-cell">
+        <div class="ms-num" id="ms-score">—</div>
+        <div class="ms-lbl">BUILD SCORE</div>
+      </div>
+    </div>
+
+    <div class="perf-wrap">
+      <div class="perf-title">PERFORMANCE RATING</div>
+      <div class="perf-bar-row">
+        <span class="perf-bar-label">COMPLETENESS</span>
+        <div class="perf-track"><div class="perf-fill" id="pf-complete" style="width:0%"></div></div>
+        <span class="perf-val" id="pv-complete">–</span>
+      </div>
+      <div class="perf-bar-row">
+        <span class="perf-bar-label">SPEED</span>
+        <div class="perf-track"><div class="perf-fill" id="pf-speed" style="width:0%"></div></div>
+        <span class="perf-val" id="pv-speed">–</span>
+      </div>
+    </div>
+
+    <div class="rp-proceed">
+      <button id="btn-proceed">SKIP LAUNCH →</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Launch overlay countdown -->
+<div id="launch-overlay">
+  <div class="lo-tag">IGNITION SEQUENCE ACTIVE</div>
+  <div id="lo-count">30</div>
+  <div class="lo-sub">HOUSTON — STAND BY FOR LAUNCH</div>
+</div>
+
+<canvas id="fire-trail-canvas" style="position:fixed;inset:0;z-index:55;pointer-events:none;opacity:0;transition:opacity 0.3s;"></canvas>
+<canvas id="warp-canvas" style="position:fixed;inset:0;z-index:65;pointer-events:none;opacity:0;transition:opacity 0.5s;"></canvas>
+<div id="flash"></div>
+<div id="trans-out"></div>
+
+<script>
+/* ══════════════════════════════════════════════
+   ROCKET MODULE (inline from rocket.js)
+══════════════════════════════════════════════ */
+const ROCKET_PARTS = [
+  { id:'nosecone',   name:'NOSE CONE',     color:'#E8943A' },
+  { id:'fueltank',   name:'FUEL TANK',     color:'#4FC3F7' },
+  { id:'payloadbay', name:'PAYLOAD BAY',   color:'#F5A623' },
+  { id:'fins',       name:'FIN ARRAY',     color:'#E8943A' },
+  { id:'enginebell', name:'ENGINE BELL',   color:'#B84016' },
+  { id:'booster',    name:'SRB BOOSTERS',  color:'#7A2208' },
+];
+
+function buildRocketSVG(assembledParts, opts={}) {
+  const all = assembledParts || ROCKET_PARTS.map(p=>p.id);
+  const has = id => all.includes(id);
+  const glow = opts.glow !== false;
+  const animate = opts.animate !== false;
+
+  const animCss = animate ? `
+    @keyframes engineFlicker{0%,100%{opacity:.7}33%{opacity:1}66%{opacity:.5}}
+    @keyframes thrustPulse{0%,100%{transform:scaleY(1) translateY(0)}50%{transform:scaleY(1.18) translateY(2px)}}
+    @keyframes rocketFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+    @keyframes glowPulse{0%,100%{opacity:.4}50%{opacity:.9}}
+    @keyframes scanSweep{0%{transform:translateY(-100%)}100%{transform:translateY(500%)}}
+    .rocket-body{animation:rocketFloat 4s ease-in-out infinite;transform-origin:100px 250px;}
+    .thrust-flame{animation:thrustPulse .4s ease-in-out infinite;transform-origin:100px 420px;}
+    .engine-glow{animation:glowPulse .6s ease-in-out infinite;}
+    .scan-line{animation:scanSweep 3s linear infinite;}
+  ` : '';
+
+  return `<svg viewBox="0 0 200 520" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs>
+<style>${animCss}</style>
+<filter id="rkt-go" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="rkt-gb" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="rkt-ge" x="-80%" y="-80%" width="360%" height="360%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<radialGradient id="tg" cx="50%" cy="0%" r="60%"><stop offset="0%" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset="20%" stop-color="#FFE066" stop-opacity=".9"/><stop offset="55%" stop-color="#F5A623" stop-opacity=".7"/><stop offset="100%" stop-color="#B84016" stop-opacity="0"/></radialGradient>
+<radialGradient id="btL" cx="50%" cy="0%" r="60%"><stop offset="0%" stop-color="#FFE066" stop-opacity=".8"/><stop offset="40%" stop-color="#E8943A" stop-opacity=".5"/><stop offset="100%" stop-color="#7A2208" stop-opacity="0"/></radialGradient>
+<radialGradient id="btR" cx="50%" cy="0%" r="60%"><stop offset="0%" stop-color="#FFE066" stop-opacity=".8"/><stop offset="40%" stop-color="#E8943A" stop-opacity=".5"/><stop offset="100%" stop-color="#7A2208" stop-opacity="0"/></radialGradient>
+<linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#1a1f2e"/><stop offset="30%" stop-color="#2a3040"/><stop offset="50%" stop-color="#3a4055"/><stop offset="70%" stop-color="#2a3040"/><stop offset="100%" stop-color="#1a1f2e"/></linearGradient>
+<linearGradient id="ng" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4a5060"/><stop offset="60%" stop-color="#2a3040"/><stop offset="100%" stop-color="#1a1f2e"/></linearGradient>
+<clipPath id="rkt-clip"><rect width="200" height="520"/></clipPath>
+</defs>
+<g class="rocket-body">
+
+${has('booster')?`
+<g opacity=".92">
+<rect x="28" y="260" width="26" height="120" rx="4" fill="url(#bg)" stroke="#7A2208" stroke-width="1.2"/>
+<rect x="28" y="260" width="26" height="8" rx="2" fill="#B84016" opacity=".6"/>
+<line x1="28" y1="290" x2="54" y2="290" stroke="#7A2208" stroke-width=".5" stroke-dasharray="3,3" opacity=".5"/>
+<line x1="28" y1="310" x2="54" y2="310" stroke="#7A2208" stroke-width=".5" stroke-dasharray="3,3" opacity=".5"/>
+<text x="41" y="308" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="5" fill="#7A2208" opacity=".7" letter-spacing=".5">SRB-L</text>
+<ellipse cx="41" cy="378" rx="8" ry="2.5" fill="#B84016" opacity=".5"/>
+<path d="M36 378 L46 378 L50 395 L32 395 Z" fill="#5a1a08" stroke="#B84016" stroke-width=".8"/>
+${has('enginebell')?`<ellipse class="engine-glow" cx="41" cy="395" rx="9" ry="3" fill="#E8943A" opacity=".4" filter="url(#rkt-ge)"/>`:''}
+${has('fins')?`<path d="M28 330 L10 380 L28 375 Z" fill="#E8943A" opacity=".25" stroke="#E8943A" stroke-width=".8"/>`:''}
+<rect x="146" y="260" width="26" height="120" rx="4" fill="url(#bg)" stroke="#7A2208" stroke-width="1.2"/>
+<rect x="146" y="260" width="26" height="8" rx="2" fill="#B84016" opacity=".6"/>
+<line x1="146" y1="290" x2="172" y2="290" stroke="#7A2208" stroke-width=".5" stroke-dasharray="3,3" opacity=".5"/>
+<line x1="146" y1="310" x2="172" y2="310" stroke="#7A2208" stroke-width=".5" stroke-dasharray="3,3" opacity=".5"/>
+<text x="159" y="308" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="5" fill="#7A2208" opacity=".7" letter-spacing=".5">SRB-R</text>
+<ellipse cx="159" cy="378" rx="8" ry="2.5" fill="#B84016" opacity=".5"/>
+<path d="M154 378 L164 378 L168 395 L150 395 Z" fill="#5a1a08" stroke="#B84016" stroke-width=".8"/>
+${has('enginebell')?`<ellipse class="engine-glow" cx="159" cy="395" rx="9" ry="3" fill="#E8943A" opacity=".4" filter="url(#rkt-ge)"/>`:''}
+${has('fins')?`<path d="M172 330 L190 380 L172 375 Z" fill="#E8943A" opacity=".25" stroke="#E8943A" stroke-width=".8"/>`:''}
+<line x1="54" y1="280" x2="72" y2="280" stroke="#7A2208" stroke-width="1.2" opacity=".7"/>
+<line x1="54" y1="340" x2="72" y2="340" stroke="#7A2208" stroke-width="1.2" opacity=".7"/>
+<line x1="128" y1="280" x2="146" y2="280" stroke="#7A2208" stroke-width="1.2" opacity=".7"/>
+<line x1="128" y1="340" x2="146" y2="340" stroke="#7A2208" stroke-width="1.2" opacity=".7"/>
+</g>`:``}
+
+<ellipse cx="100" cy="300" rx="34" ry="280" fill="rgba(0,0,0,.3)" transform="translate(6,0)"/>
+<rect x="68" y="110" width="64" height="280" rx="6" fill="url(#bg)" stroke="rgba(79,195,247,.15)" stroke-width=".8"/>
+<rect x="68" y="110" width="12" height="280" rx="3" fill="rgba(255,255,255,.04)"/>
+<line x1="68" y1="180" x2="132" y2="180" stroke="rgba(79,195,247,.08)" stroke-width=".6"/>
+<line x1="68" y1="240" x2="132" y2="240" stroke="rgba(79,195,247,.08)" stroke-width=".6"/>
+<line x1="68" y1="310" x2="132" y2="310" stroke="rgba(79,195,247,.08)" stroke-width=".6"/>
+
+${has('nosecone')?`
+<g filter="url(#rkt-go)">
+<path d="M100 20 L136 110 L64 110 Z" fill="url(#ng)" stroke="#E8943A" stroke-width="1.2"/>
+<line x1="100" y1="20" x2="100" y2="110" stroke="rgba(232,148,58,.3)" stroke-width=".6" stroke-dasharray="3,4"/>
+<line x1="84" y1="65" x2="116" y2="65" stroke="rgba(232,148,58,.2)" stroke-width=".5"/>
+<line x1="78" y1="88" x2="122" y2="88" stroke="rgba(232,148,58,.2)" stroke-width=".5"/>
+<circle cx="100" cy="22" r="3" fill="#F5A623" opacity=".6"/>
+<circle cx="100" cy="22" r="6" fill="#E8943A" opacity=".15"/>
+<text x="100" y="80" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="5.5" fill="#E8943A" opacity=".55" letter-spacing=".8">NOSE</text>
+</g>
+`:`<path d="M100 20 L136 110 L64 110 Z" fill="none" stroke="rgba(255,68,68,.3)" stroke-width="1" stroke-dasharray="4,4"/>`}
+
+${has('payloadbay')?`
+<g>
+<rect x="68" y="110" width="64" height="68" rx="2" fill="rgba(245,166,35,.08)" stroke="#F5A623" stroke-width=".8"/>
+<rect x="82" y="122" width="12" height="10" rx="1.5" fill="rgba(245,166,35,.18)" stroke="#F5A623" stroke-width=".7"/>
+<rect x="106" y="122" width="12" height="10" rx="1.5" fill="rgba(245,166,35,.18)" stroke="#F5A623" stroke-width=".7"/>
+<circle cx="100" cy="148" r="9" fill="rgba(79,195,247,.1)" stroke="#4FC3F7" stroke-width=".8"/>
+<circle cx="100" cy="148" r="5" fill="rgba(79,195,247,.2)" stroke="#4FC3F7" stroke-width=".5"/>
+<line x1="91" y1="148" x2="109" y2="148" stroke="#4FC3F7" stroke-width=".4" opacity=".5"/>
+<line x1="100" y1="139" x2="100" y2="157" stroke="#4FC3F7" stroke-width=".4" opacity=".5"/>
+<text x="100" y="170" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="4.5" fill="#F5A623" opacity=".5" letter-spacing=".8">PAYLOAD</text>
+</g>
+`:`<rect x="68" y="110" width="64" height="68" fill="none" stroke="rgba(255,68,68,.3)" stroke-width="1" stroke-dasharray="4,4"/>`}
+
+${has('fueltank')?`
+<g>
+<rect x="68" y="178" width="64" height="90" rx="2" fill="rgba(79,195,247,.06)" stroke="#4FC3F7" stroke-width=".8"/>
+<rect x="76" y="192" width="8" height="62" rx="1" fill="rgba(79,195,247,.05)" stroke="#4FC3F7" stroke-width=".5"/>
+<rect x="76" y="222" width="8" height="32" rx="1" fill="rgba(79,195,247,.25)"/>
+<rect x="116" y="192" width="8" height="62" rx="1" fill="rgba(79,195,247,.05)" stroke="#4FC3F7" stroke-width=".5"/>
+<rect x="116" y="210" width="8" height="44" rx="1" fill="rgba(79,195,247,.2)"/>
+<text x="100" y="215" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="4.5" fill="#4FC3F7" opacity=".5" letter-spacing=".8">LH2</text>
+<text x="100" y="228" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="4.5" fill="#4FC3F7" opacity=".5" letter-spacing=".8">LOX</text>
+<line x1="84" y1="223" x2="116" y2="223" stroke="#4FC3F7" stroke-width=".4" stroke-dasharray="3,3" opacity=".4"/>
+<line x1="68" y1="220" x2="132" y2="220" stroke="rgba(79,195,247,.12)" stroke-width=".6"/>
+<text x="100" y="255" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="4.5" fill="#4FC3F7" opacity=".5" letter-spacing=".8">TANK</text>
+</g>
+`:`<rect x="68" y="178" width="64" height="90" fill="none" stroke="rgba(255,68,68,.3)" stroke-width="1" stroke-dasharray="4,4"/>`}
+
+${has('fins')?`
+<g filter="url(#rkt-go)">
+<path d="M68 290 L30 370 L68 358 Z" fill="rgba(232,148,58,.18)" stroke="#E8943A" stroke-width="1"/>
+<line x1="68" y1="290" x2="30" y2="370" stroke="#E8943A" stroke-width=".6" opacity=".4"/>
+<path d="M132 290 L170 370 L132 358 Z" fill="rgba(232,148,58,.18)" stroke="#E8943A" stroke-width="1"/>
+<line x1="132" y1="290" x2="170" y2="370" stroke="#E8943A" stroke-width=".6" opacity=".4"/>
+</g>
+`:''}
+
+${has('enginebell')?`
+<g>
+<path d="M76 380 L124 380 L138 420 L62 420 Z" fill="#1a1208" stroke="#B84016" stroke-width="1.2"/>
+<line x1="76" y1="380" x2="124" y2="380" stroke="#E8943A" stroke-width="1.5"/>
+<line x1="72" y1="392" x2="128" y2="392" stroke="#B84016" stroke-width=".6" opacity=".5"/>
+<line x1="68" y1="406" x2="132" y2="406" stroke="#B84016" stroke-width=".6" opacity=".4"/>
+<ellipse cx="100" cy="420" rx="38" ry="4" fill="#0d0805" stroke="#B84016" stroke-width=".8"/>
+<ellipse class="engine-glow" cx="100" cy="420" rx="28" ry="6" fill="#E8943A" opacity=".35" filter="url(#rkt-ge)"/>
+</g>
+`:`<path d="M76 380 L124 380 L138 420 L62 420 Z" fill="none" stroke="rgba(255,68,68,.3)" stroke-width="1" stroke-dasharray="4,4"/>`}
+
+${has('enginebell')?`
+<g class="thrust-flame">
+<ellipse cx="100" cy="438" rx="18" ry="22" fill="url(#tg)" opacity=".9"/>
+<ellipse cx="100" cy="430" rx="8" ry="10" fill="white" opacity=".5"/>
+<ellipse cx="100" cy="450" rx="24" ry="12" fill="url(#tg)" opacity=".4"/>
+</g>
+`:''}
+
+${(has('booster')&&has('enginebell'))?`
+<g class="thrust-flame">
+<ellipse cx="41" cy="410" rx="10" ry="14" fill="url(#btL)" opacity=".8"/>
+<ellipse cx="41" cy="405" rx="4" ry="6" fill="#FFE066" opacity=".5"/>
+<ellipse cx="159" cy="410" rx="10" ry="14" fill="url(#btR)" opacity=".8"/>
+<ellipse cx="159" cy="405" rx="4" ry="6" fill="#FFE066" opacity=".5"/>
+</g>
+`:''}
+
+<text x="100" y="295" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="#EDE8E0" opacity=".22" letter-spacing="2">ARES VII</text>
+${animate?`<g clip-path="url(#rkt-clip)"><rect class="scan-line" x="60" y="0" width="80" height="2" fill="rgba(79,195,247,.12)" rx="1"/></g>`:''}
+</g>
+</svg>`;
+}
+
+function loadRocketConfig(){
+  try {
+    const raw = localStorage.getItem('aresVII_rocketConfig');
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){ return null; }
+}
+
+/* ══════════════════════════════════════════════
+   CURSOR
+══════════════════════════════════════════════ */
+const curDot = document.getElementById('cur-dot');
+const curRing = document.getElementById('cur-ring');
+let mx=innerWidth/2, my=innerHeight/2, rx=mx, ry=my;
+addEventListener('mousemove', e=>{mx=e.clientX;my=e.clientY;});
+(function cl(){
+  curDot.style.cssText += `left:${mx}px;top:${my}px;`;
+  rx+=(mx-rx)*.11; ry+=(my-ry)*.11;
+  curRing.style.cssText += `left:${rx}px;top:${ry}px;`;
+  requestAnimationFrame(cl);
+})();
+
+/* ══════════════════════════════════════════════
+   STARS
+══════════════════════════════════════════════ */
+(function(){
+  const c = document.getElementById('stars');
+  const ctx = c.getContext('2d');
+  function resize(){ c.width=innerWidth; c.height=innerHeight; draw(); }
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    for(let i=0;i<280;i++){
+      const x=Math.random()*c.width, y=Math.random()*c.height;
+      const r=Math.random()*1.2;
+      const a=0.15+Math.random()*0.6;
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(237,232,224,${a})`; ctx.fill();
+    }
+  }
+  addEventListener('resize',resize); resize();
+})();
+
+/* ══════════════════════════════════════════════
+   LAUNCH PAD GROUND DRAWING
+══════════════════════════════════════════════ */
+(function(){
+  const c = document.getElementById('pad-canvas');
+  const ctx = c.getContext('2d');
+  function resize(){ c.width=innerWidth; c.height=innerHeight; draw(); }
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    const groundY = c.height * 0.82;
+    // Ground plane glow
+    const grd = ctx.createLinearGradient(0, groundY-40, 0, groundY+80);
+    grd.addColorStop(0, 'rgba(232,148,58,0.0)');
+    grd.addColorStop(0.4, 'rgba(232,148,58,0.04)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, groundY-40, c.width, 120);
+
+    // Pad structure lines (perspective)
+    ctx.strokeStyle = 'rgba(232,148,58,0.06)';
+    ctx.lineWidth = 1;
+    const cx = c.width / 2;
+    for(let i=-6; i<=6; i++){
+      ctx.beginPath();
+      ctx.moveTo(cx + i * 80, groundY);
+      ctx.lineTo(cx + i * 400, groundY + 200);
+      ctx.stroke();
+    }
+    for(let j=0; j<6; j++){
+      const y = groundY + j * 30;
+      const spread = j * 60;
+      ctx.beginPath();
+      ctx.moveTo(cx - 480 - spread, y);
+      ctx.lineTo(cx + 480 + spread, y);
+      ctx.stroke();
+    }
+
+    // Launch tower silhouette (left)
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 140, groundY);
+    ctx.lineTo(cx - 140, groundY - 300);
+    ctx.stroke();
+    for(let j=0; j<8; j++){
+      ctx.beginPath();
+      ctx.moveTo(cx - 140, groundY - j*36);
+      ctx.lineTo(cx - 100, groundY - j*36 - 20);
+      ctx.stroke();
+    }
+  }
+  addEventListener('resize', resize); resize();
+})();
+
+/* ══════════════════════════════════════════════
+   PLUME CANVAS (smoke/fire at base)
+══════════════════════════════════════════════ */
+const plumeC = document.getElementById('plume-canvas');
+const plumeCtx = plumeC.getContext('2d');
+let plumeActive = false;
+let plumeParticles = [];
+
+function resizePlume(){
+  plumeC.width = plumeC.offsetWidth;
+  plumeC.height = plumeC.offsetHeight;
+}
+resizePlume();
+addEventListener('resize', resizePlume);
+
+function spawnPlumeParticle(){
+  const cx = plumeC.width/2;
+  plumeParticles.push({
+    x: cx + (Math.random()-0.5)*40,
+    y: plumeC.height * 0.1,
+    vx: (Math.random()-0.5)*2.5,
+    vy: -(Math.random()*1.5+0.5),
+    r: 12+Math.random()*20,
+    life: 1,
+    decay: 0.008+Math.random()*0.012,
+    type: Math.random() < 0.4 ? 'fire' : 'smoke',
+  });
+}
+
+function drawPlume(){
+  requestAnimationFrame(drawPlume);
+  plumeCtx.clearRect(0,0,plumeC.width,plumeC.height);
+  if(!plumeActive) return;
+
+  if(Math.random()<0.7) spawnPlumeParticle();
+
+  plumeParticles = plumeParticles.filter(p=>p.life>0);
+  plumeParticles.forEach(p=>{
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.98; p.r += 0.4;
+    p.life -= p.decay;
+    const a = Math.max(0, p.life);
+
+    const grd = plumeCtx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+    if(p.type==='fire'){
+      grd.addColorStop(0, `rgba(255,240,100,${a*0.8})`);
+      grd.addColorStop(0.4, `rgba(232,148,58,${a*0.5})`);
+      grd.addColorStop(1, `rgba(184,64,22,0)`);
+    } else {
+      const grey = 30+Math.floor(a*60);
+      grd.addColorStop(0, `rgba(${grey},${grey},${grey},${a*0.25})`);
+      grd.addColorStop(1, `rgba(${grey},${grey},${grey},0)`);
+    }
+    plumeCtx.beginPath();
+    plumeCtx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    plumeCtx.fillStyle = grd;
+    plumeCtx.fill();
+  });
+}
+drawPlume();
+/* ══════════════════════════════════════════════
+   SMOKE EFFECT
+══════════════════════════════════════════════ */
+const smkC   = document.getElementById('smoke-canvas');
+const smkctx = smkC.getContext('2d');
+let smkW, smkH, smokeOn = true; // Set to true to start smoking immediately
+const smkParts = [];
+
+function rsSmoke() { smkW=smkC.width=innerWidth; smkH=smkC.height=innerHeight; }
+rsSmoke(); addEventListener('resize', rsSmoke);
+
+function spawnSmk(intense) {
+  // Spread across the full width of the screen
+  const n = intense ? 6 : 2; // Slightly fewer particles for background ambiance
+  for(let i=0;i<n;i++) {
+    const cx = Math.random() * smkW;
+    const cy = smkH + 10;
+    smkParts.push({
+      x: cx,
+      y: cy - Math.random()*20,
+      vx:(Math.random()-0.5)*(intense?1.8:1.1),
+      vy:-(Math.random()*(intense?3.5:2.2)+0.8),
+      r: Math.random()*(intense?58:38)+18,
+      life:1.0,
+      decay:Math.random()*0.005+(intense?0.005:0.003),
+      g: Math.floor(Math.random()*35+95),
+    });
+  }
+}
+
+(function smkLoop() {
+  requestAnimationFrame(smkLoop);
+  smkctx.clearRect(0,0,smkW,smkH);
+  if(smokeOn) spawnSmk(smkParts.length > 80);
+  for(let i=smkParts.length-1;i>=0;i--){
+    const p=smkParts[i];
+    p.x+=p.vx; p.y+=p.vy;
+    p.r+=0.65; p.vx*=0.990; p.vy*=0.993;
+    p.life-=p.decay;
+    if(p.life<=0){smkParts.splice(i,1);continue;}
+    const gr=smkctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+    const a=p.life*0.22;
+    // Uses the same lighting as your mars loading screen
+    gr.addColorStop(0,  `rgba(${p.g+28},${p.g+8},${p.g-18},${a})`);
+    gr.addColorStop(0.5,`rgba(${p.g},${p.g-10},${p.g-28},${a*0.5})`);
+    gr.addColorStop(1,  'rgba(0,0,0,0)');
+    smkctx.beginPath();
+    smkctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    smkctx.fillStyle=gr; smkctx.fill();
+  }
+})();
+
+/* ══════════════════════════════════════════════
+   LOAD CONFIG & BOOT
+══════════════════════════════════════════════ */
+const config = loadRocketConfig() || {
+  parts: ['nosecone','fueltank','payloadbay','fins','enginebell','booster'],
+  allParts: ['nosecone','fueltank','payloadbay','fins','enginebell','booster'],
+  timeUsed: 52,
+  timeLeft: 38,
+  locked: 6,
+  total: 6,
+  won: true,
+  skipped: false,
+};
+
+// Inject rocket SVG
+document.getElementById('rocket-svg-container').innerHTML = buildRocketSVG(config.parts, {glow:true, animate:true});
+
+// Stats
+const lockedCount = config.locked || config.parts.length;
+const totalCount  = config.total || 6;
+const timeUsed    = config.timeUsed || 0;
+const timeLeft    = config.timeLeft || 0;
+const score       = Math.round((lockedCount/totalCount)*100 * (1 + (90-timeUsed)/90));
+const speedPct    = Math.max(0, Math.round((1 - timeUsed/90)*100));
+const completePct = Math.round((lockedCount/totalCount)*100);
+
+// Fill UI
+document.getElementById('stat-assembly').textContent = `${lockedCount}/${totalCount} PARTS`;
+document.getElementById('stat-assembly').className   = 'hud-value ' + (lockedCount===totalCount?'green':'orange');
+document.getElementById('stat-time').textContent     = `${timeUsed}s ELAPSED`;
+document.getElementById('ms-parts').textContent      = lockedCount;
+document.getElementById('ms-time').textContent       = timeUsed;
+document.getElementById('ms-score').textContent      = score;
+document.getElementById('rp-parts-count').textContent = `${lockedCount} of ${totalCount}`;
+
+// Performance bars (delayed for CSS transition)
+setTimeout(()=>{
+  document.getElementById('pf-complete').style.width = completePct + '%';
+  document.getElementById('pv-complete').textContent  = completePct + '%';
+  document.getElementById('pf-speed').style.width    = speedPct + '%';
+  document.getElementById('pv-speed').textContent     = speedPct + '%';
+}, 800);
+
+// Parts checklist
+const PART_LABELS = {
+  nosecone:'NOSE CONE', fueltank:'FUEL TANK', payloadbay:'PAYLOAD BAY',
+  fins:'FIN ARRAY', enginebell:'ENGINE BELL', booster:'SRB BOOSTERS',
+};
+const allPartIds = ['nosecone','fueltank','payloadbay','fins','enginebell','booster'];
+const checkList = document.getElementById('parts-checklist');
+allPartIds.forEach(id=>{
+  const ok = config.parts.includes(id);
+  const div = document.createElement('div');
+  div.className = 'part-check';
+  div.innerHTML = `
+    <div class="check-icon ${ok?'ok':'miss'}">${ok?'✓':'✗'}</div>
+    <span class="check-label ${ok?'ok':'miss'}">${PART_LABELS[id]}</span>
+  `;
+  checkList.appendChild(div);
+});
+
+// Hide labels for missing parts
+if(!config.parts.includes('nosecone'))   document.getElementById('lbl-nose').style.opacity='0.2';
+if(!config.parts.includes('fueltank'))   document.getElementById('lbl-fuel').style.opacity='0.2';
+if(!config.parts.includes('enginebell')) document.getElementById('lbl-eng').style.opacity='0.2';
+if(!config.parts.includes('fins'))       document.getElementById('lbl-fin').style.opacity='0.2';
+
+/* ── TX LOG ── */
+const txLog = document.getElementById('tx-log');
+const txMessages = [
+  { type:'system',  delay:500,  text:'[SYS] Vehicle standing by. Pad 39A clear.' },
+  { type:'houston', delay:1800, text:'HOUSTON: Ares Seven. T-minus 30. Go for launch.' },
+  { type:'system',  delay:3200, text:`[SYS] Assembly complete: ${lockedCount}/${totalCount} components.` },
+  { type:'houston', delay:5000, text:'HOUSTON: All systems nominal. You have GO.' },
+  { type:'system',  delay:7000, text:'[SYS] Ignition sequence armed.' },
+  { type:(lockedCount<totalCount?'alert':'system'), delay:9000,
+    text: lockedCount<totalCount
+      ? `[WARN] ${totalCount-lockedCount} component(s) missing. Proceed with caution.`
+      : '[SYS] Full manifest confirmed. Nominal launch.' },
+];
+txMessages.forEach(m=>{
+  setTimeout(()=>{
+    const el = document.createElement('div');
+    el.className = `tx-entry ${m.type}`;
+    el.textContent = m.text;
+    txLog.appendChild(el);
+    txLog.scrollTop = txLog.scrollHeight;
+    
+    // REMOVE THIS LINE:
+    // if(m.delay>=9000) enableLaunch(); 
+  }, m.delay);
+});
+
+/* ── SHOW MAIN ── */
+setTimeout(()=>document.getElementById('main').classList.add('visible'), 300);
+
+/* ── COUNTDOWN ── */
+let countdownVal = 30;
+let countdownIv = null;
+const cdDisplay = document.getElementById('countdown-display');
+
+function startCountdown(){
+  countdownIv = setInterval(()=>{
+    countdownVal--;
+    cdDisplay.textContent = `T–${String(countdownVal).padStart(2,'0')}`;
+    document.getElementById('top-bar-fill').style.width = ((30-countdownVal)/30*100)+'%';
+    
+    if(countdownVal <= 10) cdDisplay.classList.add('urgent');
+    
+    if(countdownVal <= 0){
+      clearInterval(countdownIv);
+      cdDisplay.textContent = 'T–00';
+      cdDisplay.classList.remove('urgent');
+      cdDisplay.classList.add('go');
+      
+      // ADD THIS LINE HERE to enable the button when the bar is full!
+      document.getElementById('btn-launch').disabled = false; 
+    }
+  }, 1000);
+}
+
+setTimeout(startCountdown, 2000);
+
+/* ── LAUNCH BUTTON ── */
+function enableLaunch(){
+  const btn = document.getElementById('btn-launch');
+  btn.disabled = false;
+}
+
+document.getElementById('btn-launch').addEventListener('click', ()=>{
+  if(document.getElementById('btn-launch').disabled) return;
+  clearInterval(countdownIv);
+  startLaunchSequence();
+});
+
+/* ── LAUNCH SEQUENCE ── */
+function startLaunchSequence(){
+  document.getElementById('smoke-canvas').style.opacity = '1';
+  for(let i=0;i<30;i++) spawnSmk(true);
+
+  const overlay = document.getElementById('launch-overlay');
+  const loCount = document.getElementById('lo-count');
+  overlay.classList.add('active');
+
+  plumeActive = true;
+  document.getElementById('plume-canvas').classList.add('active');
+
+  const steps = ['3','2','1','GO'];
+  let si = 0;
+  loCount.textContent = steps[si];
+  si++;
+
+  const seq = setInterval(()=>{
+    loCount.textContent = steps[si];
+    if(steps[si]==='GO'){
+      loCount.classList.add('go');
+      clearInterval(seq);
+
+      // — ignition flash —
+      setTimeout(()=>{
+        const flash = document.getElementById('flash');
+        flash.style.background = 'radial-gradient(ellipse at 50% 85%, #FFE066 0%, #E8943A 30%, #fff 60%, #fff 100%)';
+        flash.style.opacity = '1';
+        setTimeout(()=>flash.style.opacity='0', 220);
+      }, 280);
+
+      // — massive smoke burst —
+      setTimeout(()=>{
+        for(let i=0;i<80;i++) spawnSmk(true);
+      }, 300);
+
+      // — engine glow / pad shockwave —
+      setTimeout(()=>{
+        startShockwave();
+      }, 300);
+
+      // — camera shake —
+      setTimeout(startCameraShake, 340);
+
+      // — rocket lifts off —
+      setTimeout(()=>{
+        document.getElementById('rocket-wrap').classList.add('launching');
+        startFireTrail();
+      }, 500);
+
+      // — labels fade —
+      setTimeout(()=>{
+        ['lbl-nose','lbl-fuel','lbl-eng','lbl-fin'].forEach(id=>{
+          const el=document.getElementById(id);
+          if(el) el.style.transition='opacity 0.6s';
+          if(el) el.style.opacity='0';
+        });
+        document.getElementById('reticle').style.opacity='0';
+      }, 600);
+
+      // — second flash as it clears frame —
+      setTimeout(()=>{
+        const flash=document.getElementById('flash');
+        flash.style.background='#fff';
+        flash.style.opacity='0.4';
+        setTimeout(()=>flash.style.opacity='0',300);
+      }, 2000);
+
+      // — star warp transition —
+      setTimeout(startWarpTransition, 2400);
+
+      // — navigate —
+      setTimeout(()=>{
+        overlay.classList.remove('active');
+        goNext();
+      }, 4200);
+    }
+    si++;
+  }, 900);
+}
+
+/* ── SHOCKWAVE RING ── */
+function startShockwave(){
+  const stage = document.getElementById('rocket-stage');
+  const ring = document.createElement('div');
+  ring.style.cssText = `
+    position:absolute; border-radius:50%;
+    left:50%; bottom:18%;
+    transform:translate(-50%,50%);
+    width:60px; height:60px;
+    border:2px solid rgba(232,148,58,0.9);
+    pointer-events:none; z-index:20;
+    animation:shockExpand 1.2s ease-out forwards;
+  `;
+  const ring2 = ring.cloneNode();
+  ring2.style.animationDelay = '0.15s';
+  ring2.style.borderColor = 'rgba(255,255,255,0.5)';
+  const ring3 = ring.cloneNode();
+  ring3.style.animationDelay = '0.3s';
+  ring3.style.borderColor = 'rgba(232,148,58,0.4)';
+
+  if(!document.getElementById('sw-style')){
+    const st=document.createElement('style');
+    st.id='sw-style';
+    st.textContent=`
+      @keyframes shockExpand{
+        0%  {width:60px;height:60px;opacity:1;}
+        100%{width:600px;height:200px;opacity:0;}
+      }
+    `;
+    document.head.appendChild(st);
+  }
+  stage.appendChild(ring);
+  stage.appendChild(ring2);
+  stage.appendChild(ring3);
+  setTimeout(()=>{ ring.remove(); ring2.remove(); ring3.remove(); }, 2000);
+}
+
+/* ── CAMERA SHAKE ── */
+function startCameraShake(){
+  const main=document.getElementById('main');
+  let elapsed=0;
+  const shakeIv=setInterval(()=>{
+    elapsed+=16;
+    const amp=Math.max(0, 10*(1-elapsed/1200));
+    const dx=(Math.random()-0.5)*amp;
+    const dy=(Math.random()-0.5)*amp;
+    main.style.transform=`translate(${dx}px,${dy}px)`;
+    if(elapsed>1200){
+      clearInterval(shakeIv);
+      main.style.transform='';
+    }
+  },16);
+}
+
+/* ── FIRE TRAIL CANVAS ── */
+let fireTrailActive=false;
+function startFireTrail(){
+  fireTrailActive=true;
+  const c=document.getElementById('fire-trail-canvas');
+  if(!c) return;
+  c.style.opacity='1';
+  const ctx=c.getContext('2d');
+  const particles=[];
+  function resize(){ c.width=innerWidth; c.height=innerHeight; }
+  resize();
+
+  // Track rocket position (starts at ~82% from top, moves up)
+  let rktY = innerHeight * 0.82;
+  const rktX = innerWidth / 2;
+  const startTime = performance.now();
+
+  function loop(){
+    if(!fireTrailActive) return;
+    requestAnimationFrame(loop);
+    ctx.clearRect(0,0,c.width,c.height);
+
+    const elapsed=(performance.now()-startTime)/1000;
+    // Ease rocket upward
+    const progress=Math.min(1, elapsed/2.5);
+    const eased=progress<0.5?2*progress*progress:1-Math.pow(-2*progress+2,2)/2;
+    rktY = innerHeight*(0.82 - 1.2*eased);
+
+    // Spawn trail particles from rocket base
+    for(let i=0;i<6;i++){
+      const spread=(Math.random()-0.5)*40;
+      particles.push({
+        x: rktX+spread, y: rktY+10,
+        vx: (Math.random()-0.5)*3,
+        vy: Math.random()*4+2,
+        r: 4+Math.random()*16,
+        life:1,
+        decay:0.02+Math.random()*0.03,
+        type:Math.random()<0.5?'fire':'smoke',
+      });
+    }
+
+    // Draw and update particles
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.x+=p.vx; p.y+=p.vy;
+      p.r+=0.6; p.vx*=0.97;
+      p.life-=p.decay;
+      if(p.life<=0){particles.splice(i,1);continue;}
+
+      const gr=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+      if(p.type==='fire'){
+        gr.addColorStop(0,`rgba(255,240,120,${p.life*0.9})`);
+        gr.addColorStop(0.35,`rgba(232,148,58,${p.life*0.6})`);
+        gr.addColorStop(1,`rgba(122,34,8,0)`);
+      } else {
+        const g=20+Math.floor(p.life*40);
+        gr.addColorStop(0,`rgba(${g},${g},${g},${p.life*0.3})`);
+        gr.addColorStop(1,`rgba(${g},${g},${g},0)`);
+      }
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=gr; ctx.fill();
+    }
+  }
+  loop();
+}
+
+/* ── STAR WARP ── */
+function startWarpTransition(){
+  const c=document.getElementById('warp-canvas');
+  if(!c) return;
+  c.style.opacity='1';
+  c.width=innerWidth; c.height=innerHeight;
+  const ctx=c.getContext('2d');
+  const cx=innerWidth/2, cy=innerHeight/2;
+  const stars=[];
+  for(let i=0;i<300;i++){
+    const angle=Math.random()*Math.PI*2;
+    const dist=Math.random()*Math.min(innerWidth,innerHeight)*0.5;
+    stars.push({ angle, dist, speed:0, width:1, opacity:0 });
+  }
+  const startT=performance.now();
+  function loop(){
+    const t=(performance.now()-startT)/1000;
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    ctx.fillStyle=`rgba(2,4,10,${Math.min(1,t*0.4)})`;
+    ctx.fillRect(0,0,innerWidth,innerHeight);
+
+    const warpFactor=Math.min(1,t*0.7);
+    stars.forEach(s=>{
+      s.speed=0.5+warpFactor*18;
+      s.dist+=s.speed;
+      s.width=1+warpFactor*3;
+      s.opacity=Math.min(1,t*2);
+
+      const x1=cx+Math.cos(s.angle)*s.dist;
+      const y1=cy+Math.sin(s.angle)*s.dist;
+      const x2=cx+Math.cos(s.angle)*(s.dist-s.speed*4);
+      const y2=cy+Math.sin(s.angle)*(s.dist-s.speed*4);
+
+      if(s.dist>Math.max(innerWidth,innerHeight)) {
+        s.dist=Math.random()*50;
+      }
+
+      const grad=ctx.createLinearGradient(x2,y2,x1,y1);
+      grad.addColorStop(0,`rgba(237,232,224,0)`);
+      grad.addColorStop(1,`rgba(237,232,224,${s.opacity*0.8})`);
+      ctx.beginPath();
+      ctx.strokeStyle=grad;
+      ctx.lineWidth=s.width;
+      ctx.moveTo(x2,y2); ctx.lineTo(x1,y1);
+      ctx.stroke();
+    });
+
+    if(t<2) requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+/* ── PROCEED / SKIP ── */
+document.getElementById('btn-proceed').addEventListener('click', goNext);
+
+function goNext(){
+  clearInterval(countdownIv);
+  plumeActive = false;
+  const t = document.getElementById('trans-out');
+  t.classList.add('on');
+  // Navigate to next section — update href as needed
+  setTimeout(()=>{ window.location.href='section5.html'; }, 1500);
+}
+</script>
+</body>
+</html>

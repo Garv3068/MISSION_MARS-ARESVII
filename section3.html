@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journey to Mars — Day 1: Assemble</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:  #02040A;
+  --deep:   #05080F;
+  --rust:   #7A2208;
+  --mars:   #B84016;
+  --flame:  #E8943A;
+  --ember:  #F5A623;
+  --white:  #EDE8E0;
+  --muted:  #4A5568;
+  --dim:    #2D3748;
+  --accent: #4FC3F7;
+  --green:  #39FF89;
+  --font-d: 'Bebas Neue', sans-serif;
+  --font-b: 'Rajdhani', sans-serif;
+  --font-m: 'Share Tech Mono', monospace;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--black);
+  cursor: none;
+}
+
+/* ── CURSOR ── */
+#cur-dot {
+  position: fixed; z-index: 9999; width: 8px; height: 8px;
+  background: var(--ember); border-radius: 50%;
+  pointer-events: none; transform: translate(-50%,-50%);
+  mix-blend-mode: screen;
+}
+#cur-ring {
+  position: fixed; z-index: 9998; width: 32px; height: 32px;
+  border: 1px solid rgba(232,148,58,0.4); border-radius: 50%;
+  pointer-events: none; transform: translate(-50%,-50%);
+  transition: transform 0.08s, width 0.15s, height 0.15s, border-color 0.15s;
+}
+#cur-ring.grabbing {
+  width: 44px; height: 44px;
+  border-color: rgba(232,148,58,0.9);
+}
+#cur-cross-h, #cur-cross-v {
+  position: fixed; z-index: 9997;
+  background: rgba(232,148,58,0.22); pointer-events: none;
+  transform: translate(-50%,-50%);
+}
+#cur-cross-h { width: 20px; height: 1px; }
+#cur-cross-v { width: 1px;  height: 20px; }
+
+/* ── GRAIN ── */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 90;
+  pointer-events: none; opacity: 0.15;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* ── STARS ── */
+#stars-canvas {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+}
+
+/* ── INTRO SCREEN ── */
+#intro-screen {
+  position: fixed; inset: 0; z-index: 20;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(2, 4, 10, 0.7);
+  backdrop-filter: blur(2px);
+  transition: opacity 1s ease-out;
+}
+#intro-screen.hidden { opacity: 0; pointer-events: none; }
+
+.brk { position: absolute; width: 20px; height: 20px; }
+.brk-tl { top: 22px; left: 22px; border-top: 1px solid var(--dim); border-left: 1px solid var(--dim); }
+.brk-tr { top: 22px; right: 22px; border-top: 1px solid var(--dim); border-right: 1px solid var(--dim); }
+.brk-bl { bottom: 22px; left: 22px; border-bottom: 1px solid var(--dim); border-left: 1px solid var(--dim); }
+.brk-br { bottom: 22px; right: 22px; border-bottom: 1px solid var(--dim); border-right: 1px solid var(--dim); }
+
+.corner-lbl {
+  position: absolute;
+  font-family: var(--font-m); font-size: 10px;
+  color: rgba(150,140,125,0.7); letter-spacing: 0.14em; line-height: 1.7;
+}
+.cl-tl { top: 28px; left: 38px; }
+.cl-tr { top: 28px; right: 38px; text-align: right; }
+.cl-bl { bottom: 28px; left: 38px; }
+.cl-br { bottom: 28px; right: 38px; text-align: right; }
+
+.intro-day {
+  font-family: var(--font-m); font-size: clamp(10px,1.4vw,13px);
+  color: var(--flame); letter-spacing: 0.32em;
+  text-transform: uppercase; margin-bottom: 18px;
+  opacity: 0; animation: fadeUp 0.8s 0.5s forwards;
+}
+.intro-title {
+  font-family: var(--font-d);
+  font-size: clamp(44px,8vw,110px);
+  line-height: 0.88; letter-spacing: 0.06em;
+  color: var(--white); text-align: center;
+  opacity: 0; animation: fadeUp 0.9s 0.7s forwards;
+}
+.intro-title .highlight { color: var(--flame); display: block; }
+.intro-title .sub {
+  color: rgba(237,232,224,0.15); display: block;
+  font-size: 0.5em; letter-spacing: 0.18em;
+}
+.intro-tx {
+  margin-top: 30px;
+  max-width: 560px; width: 90vw;
+  background: rgba(5,8,15,0.85);
+  border: 1px solid rgba(232,148,58,0.15);
+  border-left: 2px solid var(--flame);
+  padding: 20px 24px;
+  opacity: 0; animation: fadeUp 0.8s 1s forwards;
+}
+.tx-tag {
+  font-family: var(--font-m); font-size: 10px;
+  color: var(--flame); letter-spacing: 0.22em; margin-bottom: 12px;
+}
+.tx-body {
+  font-family: var(--font-m); font-size: clamp(11px,1.4vw,13px);
+  color: var(--white); letter-spacing: 0.06em; line-height: 2.0;
+}
+.tx-body .muted { color: var(--muted); }
+.tx-body .highlight { color: var(--ember); }
+
+.parts-preview {
+  display: flex; gap: 16px; margin-top: 22px; flex-wrap: wrap; justify-content: center;
+  opacity: 0; animation: fadeUp 0.8s 1.2s forwards;
+}
+.part-chip {
+  font-family: var(--font-m); font-size: 10px;
+  color: var(--muted); letter-spacing: 0.16em;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 6px 14px; border-radius: 2px;
+}
+
+.btn-launch {
+  margin-top: 28px;
+  font-family: var(--font-d); font-size: 22px;
+  letter-spacing: 0.2em; color: var(--black);
+  background: linear-gradient(135deg, var(--flame), var(--mars));
+  border: none; padding: 14px 50px; border-radius: 2px;
+  cursor: none; transition: transform 0.2s, box-shadow 0.2s;
+  opacity: 0; animation: fadeUp 0.8s 1.5s forwards;
+  position: relative; overflow: hidden;
+}
+.btn-launch::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+}
+.btn-launch:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 40px rgba(232,148,58,0.4);
+}
+
+/* ── GAME SCREEN ── */
+#game-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 30; /* FIX: higher than intro */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s;
+  display: flex;
+  flex-direction: column;
+}
+#game-screen.visible {
+  opacity: 1;
+  pointer-events: all;
+  display: flex;
+}
+
+/* ── TOP HUD ── */
+.hud-top {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: 16px 28px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  background: linear-gradient(to bottom, rgba(2,4,10,0.95), transparent);
+  z-index: 50; pointer-events: none;
+}
+.hud-left, .hud-right { display: flex; flex-direction: column; gap: 3px; }
+.hud-item {
+  font-family: var(--font-m); font-size: clamp(9px,1.1vw,11px);
+  color: rgba(150,140,125,0.75); letter-spacing: 0.14em;
+}
+.hud-item span { color: var(--ember); }
+.hud-item .good { color: var(--green); }
+.hud-item .bad  { color: #ff4444; animation: blink 0.7s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── TIMER BAR ── */
+#timer-bar-wrap {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px; z-index: 51;
+}
+#timer-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--rust), var(--flame), var(--ember));
+  width: 100%;
+  transition: width 0.5s linear;
+}
+
+/* ── TX BAR ── */
+#tx-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 12px 28px 18px;
+  background: linear-gradient(to top, rgba(2,4,10,0.98), transparent);
+  display: flex; align-items: flex-start; gap: 10px;
+  z-index: 50; pointer-events: none;
+}
+.tx-icon {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--flame); letter-spacing: 0.18em;
+  white-space: nowrap; padding-top: 2px; flex-shrink: 0;
+}
+#tx-text {
+  font-family: var(--font-m); font-size: clamp(10px,1.3vw,12px);
+  color: var(--white); letter-spacing: 0.08em; line-height: 1.6;
+}
+
+/* ── SKIP ── */
+#skip-btn {
+  position: absolute; top: 16px; right: 28px;
+  font-family: var(--font-m); font-size: 10px;
+  color: var(--dim); letter-spacing: 0.14em;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 6px 14px; border-radius: 2px;
+  cursor: none; pointer-events: all;
+  transition: color 0.2s, border-color 0.2s;
+  z-index: 55;
+}
+#skip-btn:hover { color: var(--white); border-color: rgba(255,255,255,0.25); }
+
+/* ── MAIN GAME AREA ── */
+#arena {
+  position: absolute; inset: 0;
+  display: flex; align-items: stretch;
+  gap: 0;
+}
+
+/* LEFT: parts panel */
+#parts-panel {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: clamp(160px, 18vw, 220px);
+  background: rgba(5,8,15,0.92);
+  border-right: 1px solid rgba(232,148,58,0.12);
+  display: flex; flex-direction: column;
+  padding: 80px 0 60px;
+  z-index: 20;
+  overflow: visible;
+}
+.panel-label {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--muted); letter-spacing: 0.22em;
+  padding: 0 18px 14px; flex-shrink: 0;
+}
+.panel-label span { color: var(--flame); }
+
+.parts-list {
+  flex: 1; overflow-y: auto; padding: 4px 14px 20px;
+  display: flex; flex-direction: column; gap: 10px;
+  scrollbar-width: thin; scrollbar-color: var(--dim) transparent;
+}
+
+.part-item {
+  border: 1px solid rgba(232,148,58,0.2);
+  background: rgba(232,148,58,0.04);
+  border-radius: 3px;
+  padding: 10px 12px;
+  cursor: none;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s, opacity 0.3s;
+  position: relative;
+  user-select: none;
+  display: flex; flex-direction: column; gap: 6px;
+  touch-action: none;
+}
+.part-item:hover {
+  border-color: rgba(232,148,58,0.6);
+  background: rgba(232,148,58,0.1);
+}
+.part-item.dragging {
+  opacity: 0.35;
+  border-style: dashed;
+}
+.part-item.used {
+  opacity: 0.3;
+  pointer-events: none;
+  border-color: var(--green);
+}
+.part-icon-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.part-svg { width: 36px; height: 36px; flex-shrink: 0; }
+.part-name {
+  font-family: var(--font-m); font-size: 10px;
+  color: var(--white); letter-spacing: 0.12em; line-height: 1.4;
+}
+.part-desc {
+  font-family: var(--font-b); font-size: 11px;
+  color: var(--muted); letter-spacing: 0.04em; font-weight: 300;
+}
+.part-status {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--green); letter-spacing: 0.16em;
+  display: none;
+}
+.part-item.used .part-status { display: block; }
+
+/* ── CENTER: blueprint ── */
+#blueprint-area {
+  position: absolute;
+  left: clamp(160px, 18vw, 220px);
+  right: clamp(160px, 18vw, 220px);
+  top: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+}
+#blueprint-canvas {
+  position: relative;
+  width: min(380px, 42vw);
+  height: min(580px, 75vh);
+}
+
+/* ghost blueprint rocket outline */
+.blueprint-bg {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 1;
+}
+
+/* drop zones */
+.drop-zone {
+  position: absolute;
+  border: 1px dashed rgba(79,195,247,0.3);
+  border-radius: 4px;
+  z-index: 5;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 4px;
+  overflow: hidden;
+}
+.drop-zone.ready {
+  border-color: rgba(232,148,58,0.5);
+  box-shadow: 0 0 12px rgba(232,148,58,0.1) inset;
+}
+.drop-zone.hovered {
+  border-color: rgba(232,148,58,0.9);
+  background: rgba(232,148,58,0.08);
+  box-shadow: 0 0 20px rgba(232,148,58,0.2) inset;
+}
+.drop-zone.filled {
+  border-color: rgba(57,255,137,0.5);
+  background: rgba(57,255,137,0.04);
+  box-shadow: 0 0 16px rgba(57,255,137,0.1) inset;
+}
+.drop-zone.error {
+  border-color: rgba(255,68,68,0.8);
+  background: rgba(255,68,68,0.06);
+  animation: errorShake 0.4s;
+}
+@keyframes errorShake {
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(4px)}
+}
+.zone-label {
+  font-family: var(--font-m); font-size: 8px;
+  color: rgba(79,195,247,0.5); letter-spacing: 0.2em;
+  pointer-events: none; text-align: center;
+  line-height: 1.4;
+}
+.zone-label.filled-label { color: rgba(57,255,137,0.6); }
+.zone-filled-svg {
+  width: 90%; height: 80%; object-fit: contain;
+  pointer-events: none;
+}
+
+/* zone number badge */
+.zone-num {
+  position: absolute; top: 4px; right: 6px;
+  font-family: var(--font-m); font-size: 8px;
+  color: rgba(79,195,247,0.35); letter-spacing: 0.1em;
+}
+
+/* center marker scan lines */
+.scan-line {
+  position: absolute; left: 0; right: 0; height: 1px;
+  background: linear-gradient(to right, transparent, rgba(79,195,247,0.08), transparent);
+  pointer-events: none; z-index: 2;
+  animation: scanMove 6s linear infinite;
+}
+@keyframes scanMove {
+  0%   { top: 0%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* ── RIGHT: assembly log ── */
+#log-panel {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: clamp(160px, 18vw, 220px);
+  background: rgba(5,8,15,0.92);
+  border-left: 1px solid rgba(232,148,58,0.12);
+  display: flex; flex-direction: column;
+  padding: 80px 0 60px;
+  z-index: 20;
+}
+.log-title {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--muted); letter-spacing: 0.22em;
+  padding: 0 18px 14px; flex-shrink: 0;
+}
+.log-title span { color: var(--accent); }
+#log-list {
+  flex: 1; overflow-y: auto; padding: 4px 14px 20px;
+  display: flex; flex-direction: column; gap: 8px;
+  scrollbar-width: thin; scrollbar-color: var(--dim) transparent;
+}
+.log-entry {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--muted); letter-spacing: 0.1em; line-height: 1.6;
+  border-left: 1px solid var(--dim); padding-left: 8px;
+  opacity: 0; animation: fadeIn 0.4s forwards;
+}
+.log-entry.success { border-left-color: var(--green); color: rgba(57,255,137,0.7); }
+.log-entry.error   { border-left-color: #ff4444; color: rgba(255,68,68,0.7); }
+.log-entry.info    { border-left-color: var(--accent); color: rgba(79,195,247,0.7); }
+
+/* progress bar */
+.progress-wrap {
+  padding: 0 18px 10px; flex-shrink: 0;
+}
+.progress-label {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--muted); letter-spacing: 0.16em; margin-bottom: 6px;
+}
+.progress-label span { color: var(--ember); }
+.progress-track {
+  height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden;
+}
+#progress-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(to right, var(--rust), var(--flame));
+  border-radius: 2px; transition: width 0.5s ease;
+}
+
+/* ── DRAG GHOST ── */
+#drag-ghost {
+  position: fixed; z-index: 9000;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  opacity: 0.9;
+  filter: drop-shadow(0 0 16px rgba(232,148,58,0.5));
+  display: none;
+}
+
+/* ── RESULT SCREEN ── */
+#result-screen {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(2,4,10,0.0);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.8s, background 0.8s;
+}
+#result-screen.visible {
+  opacity: 1; pointer-events: all;
+  background: rgba(2,4,10,0.92);
+}
+.result-tag {
+  font-family: var(--font-m); font-size: 11px;
+  letter-spacing: 0.28em; margin-bottom: 14px;
+}
+.result-title {
+  font-family: var(--font-d);
+  font-size: clamp(40px,8vw,100px);
+  line-height: 0.9; letter-spacing: 0.07em;
+  text-align: center;
+}
+.result-body {
+  font-family: var(--font-m); font-size: clamp(11px,1.4vw,13px);
+  color: var(--muted); letter-spacing: 0.08em; line-height: 1.9;
+  max-width: 480px; text-align: center; margin: 22px auto 0;
+}
+.result-btns {
+  display: flex; gap: 16px; margin-top: 32px; flex-wrap: wrap; justify-content: center;
+}
+.btn-primary {
+  font-family: var(--font-d); font-size: 18px;
+  letter-spacing: 0.16em; color: var(--black);
+  background: linear-gradient(135deg, var(--green), #0ea86b);
+  border: none; padding: 14px 40px; border-radius: 2px;
+  cursor: none; transition: transform 0.2s;
+}
+.btn-primary:hover { transform: scale(1.04); }
+.btn-retry {
+  font-family: var(--font-m); font-size: 11px;
+  letter-spacing: 0.14em; color: var(--muted);
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 14px 30px; border-radius: 2px;
+  cursor: none; transition: color 0.2s, border-color 0.2s;
+}
+.btn-retry:hover { color: var(--white); border-color: rgba(255,255,255,0.3); }
+
+/* launch animation overlay */
+#launch-overlay {
+  position: fixed; inset: 0; z-index: 70;
+  pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at 50% 80%, rgba(232,148,58,0.3), transparent 60%);
+  transition: opacity 0.3s;
+}
+#launch-overlay.active { opacity: 1; }
+
+/* ── TRANSITION OUT ── */
+#trans-out {
+  position: fixed; inset: 0; z-index: 80;
+  background: var(--black); opacity: 0; pointer-events: none;
+  transition: opacity 1.5s;
+}
+#trans-out.on { opacity: 1; pointer-events: all; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(20px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+@keyframes fadeIn { from{opacity:0}to{opacity:1} }
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 0 rgba(57,255,137,0.3); }
+  50%     { box-shadow: 0 0 24px rgba(57,255,137,0.4); }
+}
+@keyframes floatUp {
+  from { transform: translateY(0); opacity:1; }
+  to   { transform: translateY(-60px); opacity:0; }
+}
+.float-label {
+  position: fixed; z-index: 9500;
+  font-family: var(--font-m); font-size: 11px;
+  letter-spacing: 0.18em; pointer-events: none;
+  animation: floatUp 1.2s ease-out forwards;
+}
+
+@media(max-width:700px){
+  #parts-panel, #log-panel { width: 130px; }
+  #blueprint-area { left: 130px; right: 130px; }
+  .part-desc { display: none; }
+  .log-entry { font-size: 8px; }
+}
+@media(max-width:480px){
+  #parts-panel { width: 90px; }
+  #log-panel   { width: 90px; }
+  #blueprint-area { left: 90px; right: 90px; }
+  .panel-label, .log-title { font-size: 8px; padding: 0 8px 10px; }
+  .parts-list { padding: 4px 6px 20px; gap: 7px; }
+  .part-name  { font-size: 8px; }
+  .part-svg   { width: 26px; height: 26px; }
+}
+</style>
+</head>
+<body>
+
+<div id="cur-dot"></div>
+<div id="cur-ring"></div>
+<div id="cur-cross-h"></div>
+<div id="cur-cross-v"></div>
+
+<canvas id="stars-canvas"></canvas>
+
+<!-- DRAG GHOST -->
+<div id="drag-ghost"></div>
+
+<!-- ══ INTRO SCREEN ══ -->
+<div id="intro-screen">
+  <div class="brk brk-tl"></div><div class="brk brk-tr"></div>
+  <div class="brk brk-bl"></div><div class="brk brk-br"></div>
+  <div class="corner-lbl cl-tl">MISSION DAY 1<br>MET 00:00:00</div>
+  <div class="corner-lbl cl-tr">CREW: 6 OF 6<br>STATUS: STANDBY</div>
+  <div class="corner-lbl cl-bl">SIGNAL DELAY: 0.0 SEC<br>EARTH DIST: 0 KM</div>
+  <div class="corner-lbl cl-br">ARES VII<br>ASSEMBLY REQUIRED</div>
+
+  <div class="intro-day">Day 1 · Mission Ares VII · 2047</div>
+  <div class="intro-title">
+    <span class="sub">Ares VII</span>
+    ASSEMBLE THE
+    <span class="highlight">ROCKET</span>
+  </div>
+
+  <div class="intro-tx">
+    <div class="tx-tag">HOUSTON TRANSMISSION · SIGNAL DELAY: 0.0 SEC</div>
+    <div class="tx-body">
+      <span class="muted">HOUSTON: "Ares Seven.</span><br>
+      Parts are on the pad. Window opens in <span class="highlight">90 seconds</span>.<br>
+      <span class="muted">Drag each component to its marked slot.</span><br>
+      Every part must be locked before ignition.<br>
+      <span class="muted">Do not miss the window."</span>
+    </div>
+  </div>
+
+  <div class="parts-preview">
+    <span class="part-chip">NOSE CONE</span>
+    <span class="part-chip">FUEL TANK</span>
+    <span class="part-chip">PAYLOAD BAY</span>
+    <span class="part-chip">FINS</span>
+    <span class="part-chip">ENGINE BELL</span>
+    <span class="part-chip">BOOSTER</span>
+  </div>
+
+  <button class="btn-launch" id="btn-start">BEGIN ASSEMBLY</button>
+</div>
+
+<!-- ══ GAME SCREEN ══ -->
+<div id="game-screen">
+  <!-- Timer bar at top -->
+  <div id="timer-bar-wrap"><div id="timer-bar-fill"></div></div>
+
+  <!-- HUD -->
+  <div class="hud-top">
+    <div class="hud-left">
+      <div class="hud-item">PARTS LOCKED: <span id="h-locked">0</span> / <span id="h-total">6</span></div>
+      <div class="hud-item">TIME REMAINING: <span id="h-time">90</span>s</div>
+      <div class="hud-item" id="h-status">STATUS: <span>AWAITING ASSEMBLY</span></div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-item">DAY <span>1</span> · MET 00:00:01</div>
+      <div class="hud-item">LAUNCH WINDOW: <span>T-90 SEC</span></div>
+      <div class="hud-item">SYSTEMS: <span id="h-sys">STANDBY</span></div>
+    </div>
+  </div>
+
+  <!-- SKIP -->
+  <button id="skip-btn">SKIP MISSION →</button>
+
+  <!-- ARENA -->
+  <div id="arena">
+
+    <!-- LEFT: parts panel -->
+    <div id="parts-panel">
+      <div class="panel-label">COMPONENTS<br><span id="panel-count">6 REMAINING</span></div>
+      <div class="parts-list" id="parts-list">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- CENTER: blueprint -->
+    <div id="blueprint-area">
+      <div id="blueprint-canvas">
+        <!-- scan line -->
+        <div class="scan-line"></div>
+        <!-- drop zones populated by JS -->
+      </div>
+    </div>
+
+    <!-- RIGHT: log -->
+    <div id="log-panel">
+      <div class="log-title">ASSEMBLY LOG<br><span id="log-count">0 EVENTS</span></div>
+      <div id="log-list"></div>
+      <div class="progress-wrap">
+        <div class="progress-label">COMPLETION: <span id="pct-label">0%</span></div>
+        <div class="progress-track"><div id="progress-fill"></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TX bar -->
+  <div id="tx-bar">
+    <div class="tx-icon">HOUSTON ▶</div>
+    <div id="tx-text">Awaiting assembly start.</div>
+  </div>
+</div>
+
+<!-- ══ RESULT ══ -->
+<div id="result-screen">
+  <div class="result-tag" id="r-tag">MISSION STATUS</div>
+  <div class="result-title" id="r-title">LAUNCH READY</div>
+  <div class="result-body" id="r-body"></div>
+  <div class="result-btns" id="r-btns"></div>
+</div>
+
+<div id="launch-overlay"></div>
+<div id="trans-out"></div>
+
+<script src="rocket.js"></script>
+<script>
+/* ════════════════════════════
+   CURSOR
+════════════════════════════ */
+const curDot  = document.getElementById('cur-dot'),
+      curRing = document.getElementById('cur-ring'),
+      curH    = document.getElementById('cur-cross-h'),
+      curV    = document.getElementById('cur-cross-v');
+let mx = innerWidth/2, my = innerHeight/2, rx = mx, ry = my;
+addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+(function cl(){
+  const s = `left:${mx}px;top:${my}px;`;
+  curDot.style.cssText += s; curH.style.cssText += s; curV.style.cssText += s;
+  rx += (mx-rx)*.11; ry += (my-ry)*.11;
+  curRing.style.cssText += `left:${rx}px;top:${ry}px;`;
+  requestAnimationFrame(cl);
+})();
+
+/* ════════════════════════════
+   STARS
+════════════════════════════ */
+(function(){
+  const c = document.getElementById('stars-canvas');
+  const ctx = c.getContext('2d');
+  function resize(){ c.width=innerWidth; c.height=innerHeight; draw(); }
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    for(let i=0;i<220;i++){
+      const x=Math.random()*c.width, y=Math.random()*c.height;
+      const r=Math.random()*1.1;
+      const a=0.2+Math.random()*0.6;
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(237,232,224,${a})`; ctx.fill();
+    }
+  }
+  addEventListener('resize', resize); resize();
+})();
+
+/* ════════════════════════════
+   HOUSTON TRANSMISSIONS
+════════════════════════════ */
+const txEl = document.getElementById('tx-text');
+let txIv = null;
+
+function showTx(msg){
+  txEl.textContent='';
+  let i=0;
+  if(txIv) clearInterval(txIv);
+  txIv = setInterval(()=>{
+    txEl.textContent += msg[i++];
+    if(i>=msg.length) clearInterval(txIv);
+  }, 26);
+}
+
+const txMessages = [
+  "Begin assembly. Every second counts.",
+  "HOUSTON: Drag components to the marked zones.",
+  "HOUSTON: Nose cone first — protects the crew capsule.",
+  "HOUSTON: Fuel tanks are locked in place for a reason.",
+  "HOUSTON: Don't rush the payload bay. It's delicate.",
+  "HOUSTON: Fins stabilise the ascent. Don't skip them.",
+  "HOUSTON: Engine bell goes at the base. Where thrust begins.",
+  "HOUSTON: Booster stage mounts below. Extra lift for escape velocity.",
+  "HOUSTON: You're running out of time. Focus.",
+  "HOUSTON: Every part matters. Every bolt. Every weld.",
+];
+let txIdx=0, txTimer=null;
+function startTxCycle(){
+  showTx(txMessages[0]);
+  txTimer = setInterval(()=>{
+    txIdx = (txIdx+1) % txMessages.length;
+    showTx(txMessages[txIdx]);
+  }, 4500);
+}
+function stopTxCycle(){ if(txTimer){clearInterval(txTimer);txTimer=null;} }
+
+/* ════════════════════════════
+   PART & ZONE DEFINITIONS
+════════════════════════════ */
+// SVG inline paths for each part (clean technical illustrations)
+const PART_SVGS = {
+  nosecone: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 3 L30 22 L10 22 Z" fill="rgba(232,148,58,0.25)" stroke="#E8943A" stroke-width="1.2"/>
+    <line x1="20" y1="3" x2="20" y2="22" stroke="rgba(232,148,58,0.4)" stroke-width="0.7" stroke-dasharray="2,2"/>
+    <line x1="10" y1="22" x2="30" y2="22" stroke="#E8943A" stroke-width="1.2"/>
+  </svg>`,
+  fueltank: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="12" y="8" width="16" height="24" rx="3" fill="rgba(79,195,247,0.12)" stroke="#4FC3F7" stroke-width="1.2"/>
+    <line x1="12" y1="16" x2="28" y2="16" stroke="rgba(79,195,247,0.3)" stroke-width="0.7" stroke-dasharray="2,2"/>
+    <line x1="12" y1="22" x2="28" y2="22" stroke="rgba(79,195,247,0.3)" stroke-width="0.7" stroke-dasharray="2,2"/>
+    <circle cx="20" cy="20" r="2.5" fill="rgba(79,195,247,0.4)" stroke="#4FC3F7" stroke-width="0.8"/>
+  </svg>`,
+  payloadbay: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="10" width="20" height="20" rx="1" fill="rgba(245,166,35,0.1)" stroke="#F5A623" stroke-width="1.2"/>
+    <rect x="14" y="14" width="5" height="5" fill="rgba(245,166,35,0.25)" stroke="#F5A623" stroke-width="0.8"/>
+    <rect x="21" y="14" width="5" height="5" fill="rgba(245,166,35,0.25)" stroke="#F5A623" stroke-width="0.8"/>
+    <rect x="14" y="21" width="5" height="5" fill="rgba(245,166,35,0.25)" stroke="#F5A623" stroke-width="0.8"/>
+    <rect x="21" y="21" width="5" height="5" fill="rgba(245,166,35,0.25)" stroke="#F5A623" stroke-width="0.8"/>
+  </svg>`,
+  fins: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="8,32 16,16 16,32" fill="rgba(232,148,58,0.2)" stroke="#E8943A" stroke-width="1.1"/>
+    <polygon points="32,32 24,16 24,32" fill="rgba(232,148,58,0.2)" stroke="#E8943A" stroke-width="1.1"/>
+    <line x1="16" y1="32" x2="24" y2="32" stroke="#E8943A" stroke-width="1.2"/>
+  </svg>`,
+  enginebell: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 10 L26 10 L30 32 L10 32 Z" fill="rgba(184,64,22,0.2)" stroke="#B84016" stroke-width="1.2"/>
+    <line x1="14" y1="10" x2="26" y2="10" stroke="#E8943A" stroke-width="1.5"/>
+    <ellipse cx="20" cy="32" rx="10" ry="2.5" fill="rgba(184,64,22,0.3)" stroke="#B84016" stroke-width="0.8"/>
+    <line x1="17" y1="18" x2="23" y2="18" stroke="rgba(184,64,22,0.5)" stroke-width="0.7" stroke-dasharray="2,2"/>
+    <line x1="15" y1="25" x2="25" y2="25" stroke="rgba(184,64,22,0.5)" stroke-width="0.7" stroke-dasharray="2,2"/>
+  </svg>`,
+  booster: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="10" width="10" height="24" rx="2" fill="rgba(122,34,8,0.2)" stroke="#7A2208" stroke-width="1.1"/>
+    <rect x="22" y="10" width="10" height="24" rx="2" fill="rgba(122,34,8,0.2)" stroke="#7A2208" stroke-width="1.1"/>
+    <line x1="18" y1="22" x2="22" y2="22" stroke="rgba(122,34,8,0.5)" stroke-width="1"/>
+    <circle cx="13" cy="34" r="2" fill="rgba(184,64,22,0.4)" stroke="#B84016" stroke-width="0.8"/>
+    <circle cx="27" cy="34" r="2" fill="rgba(184,64,22,0.4)" stroke="#B84016" stroke-width="0.8"/>
+  </svg>`,
+};
+
+// Parts metadata
+const PARTS = [
+  { id:'nosecone',   name:'NOSE CONE',    desc:'Aerodynamic cap', slot:'slot-nose',    color:'#E8943A' },
+  { id:'fueltank',   name:'FUEL TANK',    desc:'LH2 / LOX tanks', slot:'slot-fuel',    color:'#4FC3F7' },
+  { id:'payloadbay', name:'PAYLOAD BAY',  desc:'Crew & cargo',    slot:'slot-payload', color:'#F5A623' },
+  { id:'fins',       name:'FIN ARRAY',    desc:'Stabilisation',   slot:'slot-fins',    color:'#E8943A' },
+  { id:'enginebell', name:'ENGINE BELL',  desc:'RS-25 nozzle',    slot:'slot-engine',  color:'#B84016' },
+  { id:'booster',    name:'SRB BOOSTERS', desc:'Solid rocket pair',slot:'slot-booster', color:'#7A2208' },
+];
+
+// Drop zone layout (% of blueprint canvas)
+// Blueprint canvas is a rocket from top to bottom
+const ZONES = [
+  { id:'slot-nose',    label:'NOSE CONE\nMOUNT',  top:'2%',  left:'20%', width:'60%', height:'18%', partId:'nosecone'   },
+  { id:'slot-payload', label:'PAYLOAD\nBAY',       top:'21%', left:'20%', width:'60%', height:'15%', partId:'payloadbay' },
+  { id:'slot-fuel',    label:'FUEL\nTANK',         top:'37%', left:'18%', width:'64%', height:'18%', partId:'fueltank'   },
+  { id:'slot-fins',    label:'FIN\nARRAY',         top:'56%', left:'6%',  width:'88%', height:'14%', partId:'fins'       },
+  { id:'slot-engine',  label:'ENGINE\nBELL',       top:'71%', left:'20%', width:'60%', height:'16%', partId:'enginebell' },
+  { id:'slot-booster', label:'SRB\nBOOSTERS',      top:'56%', left:'1%',  width:'98%', height:'28%', partId:'booster'    },
+];
+
+/* ════════════════════════════
+   GAME STATE
+════════════════════════════ */
+let lockedCount = 0;
+let timeLeft = 90;
+let timerIv = null;
+let gameActive = false;
+let logCount = 0;
+const locked = {}; // zoneId → true
+let dragPartId = null;
+
+/* ════════════════════════════
+   BUILD DOM
+════════════════════════════ */
+function buildParts(){
+  const list = document.getElementById('parts-list');
+  list.innerHTML = '';
+  PARTS.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'part-item';
+    el.id = 'part-' + p.id;
+    el.dataset.partId = p.id;
+    el.innerHTML = `
+      <div class="part-icon-row">
+        <div class="part-svg">${PART_SVGS[p.id]}</div>
+        <div>
+          <div class="part-name">${p.name}</div>
+          <div class="part-desc">${p.desc}</div>
+        </div>
+      </div>
+      <div class="part-status">✓ LOCKED IN</div>
+    `;
+    // Mouse drag
+    el.addEventListener('mousedown', e => startDrag(e, p.id));
+    // Touch drag
+    el.addEventListener('touchstart', e => startDragTouch(e, p.id), {passive:false});
+    list.appendChild(el);
+  });
+}
+function buildZones(){
+  const canvas = document.getElementById('blueprint-canvas');
+  canvas.innerHTML = '<div class="scan-line"></div>'; // clear existing
+  
+  // Add the unified rocket SVG container instead of the hardcoded outline
+  const outline = document.createElement('div');
+  outline.className = 'blueprint-bg';
+  canvas.appendChild(outline);
+
+  // Generate drop zones (invisible overlay for interaction)
+  ZONES.forEach(z => {
+    const el = document.createElement('div');
+    el.className = 'drop-zone ready';
+    el.id = z.id;
+    el.style.top = z.top;
+    el.style.left = z.left;
+    el.style.width = z.width;
+    el.style.height = z.height;
+    
+    el.innerHTML = `
+      <div class="zone-num">0${ZONES.indexOf(z)+1}</div>
+      <span class="zone-label">${z.label.replace('\n','<br>')}</span>
+    `;
+    canvas.appendChild(el);
+  });
+  
+  // Draw the initial empty blueprint rocket
+  updateRocketVisual();
+}
+
+// Helper to re-render the main rocket based on locked parts
+function updateRocketVisual() {
+  const bg = document.querySelector('.blueprint-bg');
+  // Figure out which parts are currently locked
+  const assembledParts = Object.keys(locked).map(zoneId => {
+    return ZONES.find(z => z.id === zoneId).partId;
+  });
+  
+  // Render the exact same rocket as section4! 
+  bg.innerHTML = ROCKET.buildRocketSVG(assembledParts, { glow: false, animate: false });
+  
+  // Ensure the generated SVG scales to fit your blueprint area
+  const svg = bg.querySelector('svg');
+  if (svg) {
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+  }
+}
+
+/* ════════════════════════════
+   DRAG — MOUSE
+════════════════════════════ */
+let dragActive = false;
+let dragOffX = 0, dragOffY = 0;
+const ghost = document.getElementById('drag-ghost');
+
+function startDrag(e, partId){
+  if(!gameActive) return;
+  const partEl = document.getElementById('part-' + partId);
+  if(partEl.classList.contains('used')) return;
+  e.preventDefault();
+  dragActive = true;
+  dragPartId = partId;
+  curRing.classList.add('grabbing');
+
+  const part = PARTS.find(p => p.id === partId);
+  ghost.innerHTML = `<div style="width:52px;height:52px;">${PART_SVGS[partId]}</div>`;
+  ghost.style.display = 'block';
+  ghost.style.left = e.clientX + 'px';
+  ghost.style.top  = e.clientY + 'px';
+
+  partEl.classList.add('dragging');
+  highlightZones(partId, true);
+}
+
+document.addEventListener('mousemove', e => {
+  if(!dragActive) return;
+  ghost.style.left = e.clientX + 'px';
+  ghost.style.top  = e.clientY + 'px';
+  checkHoverZone(e.clientX, e.clientY);
+});
+
+document.addEventListener('mouseup', e => {
+  if(!dragActive) return;
+  dragActive = false;
+  ghost.style.display = 'none';
+  curRing.classList.remove('grabbing');
+  document.getElementById('part-' + dragPartId)?.classList.remove('dragging');
+  highlightZones(dragPartId, false);
+  tryDrop(e.clientX, e.clientY, dragPartId);
+  dragPartId = null;
+  clearZoneHover();
+});
+
+/* ════════════════════════════
+   DRAG — TOUCH
+════════════════════════════ */
+function startDragTouch(e, partId){
+  if(!gameActive) return;
+  const partEl = document.getElementById('part-' + partId);
+  if(partEl.classList.contains('used')) return;
+  e.preventDefault();
+  dragActive = true;
+  dragPartId = partId;
+
+  ghost.innerHTML = `<div style="width:52px;height:52px;">${PART_SVGS[partId]}</div>`;
+  ghost.style.display = 'block';
+  const t = e.touches[0];
+  ghost.style.left = t.clientX + 'px';
+  ghost.style.top  = t.clientY + 'px';
+
+  partEl.classList.add('dragging');
+  highlightZones(partId, true);
+}
+
+document.addEventListener('touchmove', e => {
+  if(!dragActive) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  ghost.style.left = t.clientX + 'px';
+  ghost.style.top  = t.clientY + 'px';
+  mx = t.clientX; my = t.clientY; // update cursor
+  checkHoverZone(t.clientX, t.clientY);
+}, {passive:false});
+
+document.addEventListener('touchend', e => {
+  if(!dragActive) return;
+  dragActive = false;
+  ghost.style.display = 'none';
+  document.getElementById('part-' + dragPartId)?.classList.remove('dragging');
+  highlightZones(dragPartId, false);
+  const t = e.changedTouches[0];
+  tryDrop(t.clientX, t.clientY, dragPartId);
+  dragPartId = null;
+  clearZoneHover();
+});
+
+/* ════════════════════════════
+   DROP LOGIC
+════════════════════════════ */
+function highlightZones(partId, on){
+  const part = PARTS.find(p => p.id === partId);
+  ZONES.forEach(z => {
+    const el = document.getElementById(z.id);
+    if(!el || locked[z.id]) return;
+    if(on && z.partId === partId){
+      el.classList.add('ready');
+    } else {
+      el.classList.remove('ready');
+    }
+  });
+}
+
+function clearZoneHover(){
+  ZONES.forEach(z => {
+    document.getElementById(z.id)?.classList.remove('hovered');
+  });
+}
+
+function checkHoverZone(cx, cy){
+  clearZoneHover();
+  ZONES.forEach(z => {
+    const el = document.getElementById(z.id);
+    if(!el || locked[z.id]) return;
+    const rect = el.getBoundingClientRect();
+    if(cx >= rect.left && cx <= rect.right && cy >= rect.top && cy <= rect.bottom){
+      el.classList.add('hovered');
+    }
+  });
+}
+
+function tryDrop(cx, cy, partId){
+  if(!partId) return;
+  let dropped = false;
+  ZONES.forEach(z => {
+    if(dropped || locked[z.id]) return;
+    const el = document.getElementById(z.id);
+    if(!el) return;
+    const rect = el.getBoundingClientRect();
+    if(cx >= rect.left && cx <= rect.right && cy >= rect.top && cy <= rect.bottom){
+      dropped = true;
+      if(z.partId === partId){
+        lockPart(partId, z.id);
+      } else {
+        wrongSlot(partId, z.id);
+      }
+    }
+  });
+}
+
+function lockPart(partId, zoneId){
+  locked[zoneId] = true;
+  lockedCount++;
+
+  // Mark part as used
+  const partEl = document.getElementById('part-' + partId);
+  partEl.classList.remove('dragging');
+  partEl.classList.add('used');
+// Fill zone
+  const zone = document.getElementById(zoneId);
+  zone.classList.remove('ready','hovered');
+  zone.classList.add('filled');
+  
+  // Clear the drop-zone overlay so the beautiful SVG shows through clearly
+  zone.innerHTML = '';
+  zone.style.borderColor = 'transparent';
+  zone.style.background = 'transparent';
+  zone.style.boxShadow = 'none';
+
+  // Render the newly attached part into the master rocket SVG
+  updateRocketVisual();
+
+  // Animate zone
+  zone.style.animation = 'pulseGlow 1.2s ease 2';
+
+  // Update HUD
+  document.getElementById('h-locked').textContent = lockedCount;
+  updateStatus();
+
+  // Float label
+  spawnFloat(zone, '✓ LOCKED', '#39FF89');
+
+  // Log
+  const part = PARTS.find(p => p.id === partId);
+  addLog(`${part.name} secured to mount.`, 'success');
+
+  // Progress
+  const pct = Math.round((lockedCount / PARTS.length) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('pct-label').textContent = pct + '%';
+  document.getElementById('panel-count').textContent = (PARTS.length - lockedCount) + ' REMAINING';
+
+  // Update parts count
+  const sys = ['NOMINAL','NOMINAL','NOMINAL','NOMINAL','NOMINAL','NOMINAL'];
+  document.getElementById('h-sys').textContent = sys[lockedCount-1] || 'NOMINAL';
+
+  if(lockedCount >= PARTS.length){
+    setTimeout(triggerSuccess, 600);
+  }
+}
+
+function wrongSlot(partId, zoneId){
+  const zone = document.getElementById(zoneId);
+  zone.classList.add('error');
+  setTimeout(()=>zone.classList.remove('error'), 500);
+
+  const partEl = document.getElementById('part-' + partId);
+  partEl.classList.remove('dragging');
+
+  const part  = PARTS.find(p => p.id === partId);
+  const zDef  = ZONES.find(z => z.id === zoneId);
+  addLog(`${part.name} → wrong slot. Try again.`, 'error');
+  spawnFloat(zone, '✗ WRONG SLOT', '#ff4444');
+
+  // Penalty — small time deduction
+  timeLeft = Math.max(0, timeLeft - 4);
+  showTx(`HOUSTON: Wrong mount point — 4 seconds lost. ${timeLeft}s remaining.`);
+}
+
+/* ════════════════════════════
+   LOG & FLOAT
+════════════════════════════ */
+function addLog(msg, type='info'){
+  logCount++;
+  document.getElementById('log-count').textContent = logCount + ' EVENT' + (logCount!==1?'S':'');
+  const el = document.createElement('div');
+  el.className = 'log-entry ' + type;
+  el.textContent = '[' + String(logCount).padStart(3,'0') + '] ' + msg;
+  const list = document.getElementById('log-list');
+  list.appendChild(el);
+  list.scrollTop = list.scrollHeight;
+}
+
+function spawnFloat(refEl, text, color){
+  const rect = refEl.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'float-label';
+  el.style.cssText = `
+    left:${rect.left + rect.width/2 - 50}px;
+    top:${rect.top + rect.height/2}px;
+    color:${color};
+  `;
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 1300);
+}
+
+function updateStatus(){
+  const el = document.getElementById('h-status');
+  if(lockedCount === 0)
+    el.innerHTML = 'STATUS: <span>AWAITING ASSEMBLY</span>';
+  else if(lockedCount < PARTS.length)
+    el.innerHTML = `STATUS: <span>ASSEMBLY ${Math.round(lockedCount/PARTS.length*100)}%</span>`;
+  else
+    el.innerHTML = 'STATUS: <span class="good">ALL SYSTEMS GO</span>';
+}
+
+/* ════════════════════════════
+   TIMER
+════════════════════════════ */
+function startTimer(){
+  const fill = document.getElementById('timer-bar-fill');
+  timerIv = setInterval(()=>{
+    timeLeft--;
+    document.getElementById('h-time').textContent = timeLeft;
+    fill.style.width = (timeLeft / 90 * 100) + '%';
+
+    if(timeLeft <= 20){
+      fill.style.background = 'linear-gradient(to right,#7A2208,#ff4444)';
+      document.getElementById('h-time').className = 'bad';
+    }
+    if(timeLeft <= 10 && lockedCount < PARTS.length){
+      showTx('HOUSTON: Ten seconds! Everything not locked stays on the ground!');
+    }
+    if(timeLeft <= 0){
+      clearInterval(timerIv);
+      if(lockedCount < PARTS.length) triggerFail();
+    }
+  }, 1000);
+}
+
+/* ════════════════════════════
+   WIN / LOSE
+════════════════════════════ */
+function saveRocketConfig(won){
+  const assembledParts = PARTS.filter(p => {
+    const zone = ZONES.find(z => z.partId === p.id);
+    return zone && locked[zone.id];
+  }).map(p => p.id);
+  const config = {
+    parts: assembledParts,
+    allParts: PARTS.map(p=>p.id),
+    timeUsed: 90 - timeLeft,
+    timeLeft: timeLeft,
+    locked: lockedCount,
+    total: PARTS.length,
+    won: won,
+    skipped: false,
+    timestamp: Date.now(),
+    partColors: Object.fromEntries(PARTS.map(p=>[p.id, p.color])),
+  };
+  try { localStorage.setItem('aresVII_rocketConfig', JSON.stringify(config)); } catch(e){}
+}
+
+function triggerSuccess(){
+  gameActive = false;
+  stopTxCycle();
+  clearInterval(timerIv);
+  saveRocketConfig(true);
+  showTx('HOUSTON: All parts locked. Ignition sequence initiated. GO FOR LAUNCH.');
+
+  // launch flash
+  const overlay = document.getElementById('launch-overlay');
+  overlay.classList.add('active');
+  setTimeout(()=>overlay.classList.remove('active'), 800);
+
+  setTimeout(()=>{
+    showResult(true, null);
+  }, 2000);
+}
+
+function triggerFail(){
+  gameActive = false;
+  stopTxCycle();
+  showTx('HOUSTON: Window closed. Ares Seven — launch aborted. We missed it.');
+  setTimeout(()=>{
+    showResult(false, `ONLY ${lockedCount}/${PARTS.length} PARTS SECURED`);
+  }, 1800);
+}
+
+function showResult(won, reason){
+  const rs  = document.getElementById('result-screen');
+  const tag = document.getElementById('r-tag');
+  const tit = document.getElementById('r-title');
+  const bod = document.getElementById('r-body');
+  const bts = document.getElementById('r-btns');
+
+  if(won){
+    tag.style.color = '#39FF89'; tag.textContent = 'DAY 1 — COMPLETE';
+    tit.style.color = '#39FF89'; tit.textContent  = 'LAUNCH READY';
+    bod.innerHTML = `HOUSTON: "Ares Seven.<br><br>
+      All six components locked. Vehicle nominal.<br>
+      Ignition in T-minus 30.<br><br>
+      Day 1 starts now.<br>
+      There are 210 days left."`;
+    bts.innerHTML = `
+      <button class="btn-primary" id="btn-continue">CONTINUE MISSION →</button>
+      <button class="btn-retry" id="btn-retry">Retry</button>
+    `;
+    document.getElementById('btn-continue').addEventListener('click', goNext);
+    document.getElementById('btn-retry').addEventListener('click', retryGame);
+  } else {
+    tag.style.color = '#ff4444'; tag.textContent = 'MISSION FAILED — ' + reason;
+    tit.style.color = '#ff4444'; tit.textContent  = 'LAUNCH ABORTED';
+    bod.innerHTML = `HOUSTON: "Ares Seven.<br><br>
+      Launch window closed.<br>
+      Next window opens in 26 hours.<br><br>
+      We can't afford to lose another day."`;
+    bts.innerHTML = `
+      <button class="btn-primary" id="btn-retry-main" style="background:linear-gradient(135deg,#E8943A,#7A2208)">RETRY ASSEMBLY</button>
+      <button class="btn-retry" id="btn-skip-r">Skip Mission →</button>
+    `;
+    document.getElementById('btn-retry-main').addEventListener('click', retryGame);
+    document.getElementById('btn-skip-r').addEventListener('click', goNext);
+  }
+  rs.classList.add('visible');
+}
+
+function retryGame(){
+  document.getElementById('result-screen').classList.remove('visible');
+  lockedCount = 0; timeLeft = 90; logCount = 0;
+  Object.keys(locked).forEach(k=>delete locked[k]);
+  document.getElementById('h-locked').textContent = '0';
+  document.getElementById('h-time').textContent = '90';
+  document.getElementById('timer-bar-fill').style.width = '100%';
+  document.getElementById('timer-bar-fill').style.background = 'linear-gradient(to right,var(--rust),var(--flame),var(--ember))';
+  document.getElementById('h-time').className = '';
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('pct-label').textContent = '0%';
+  document.getElementById('panel-count').textContent = '6 REMAINING';
+  document.getElementById('log-list').innerHTML = '';
+  document.getElementById('log-count').textContent = '0 EVENTS';
+  buildZones(); buildParts();
+  gameActive = true;
+  startTxCycle(); startTimer();
+  updateStatus();
+}
+
+function goNext(){
+  stopTxCycle();
+  clearInterval(timerIv);
+  const t = document.getElementById('trans-out');
+  t.classList.add('on');
+  setTimeout(()=>{ window.location.href='section4.html'; }, 1500);
+}
+
+/* ════════════════════════════
+   INIT
+════════════════════════════ */
+buildParts();
+buildZones();
+
+document.getElementById('btn-start').addEventListener('click', ()=>{
+  const intro = document.getElementById('intro-screen');
+  intro.style.opacity = '0';
+  intro.classList.add('hidden');
+setTimeout(()=>{
+    document.getElementById('game-screen').classList.add('visible');
+    gameActive = true;
+    addLog('Assembly session started. 90s window open.', 'info');
+    startTxCycle();
+    startTimer();
+  }, 1000);
+});
+
+document.getElementById('skip-btn').addEventListener('click', ()=>{
+  stopTxCycle();
+  clearInterval(timerIv);
+  saveRocketConfig(true);
+  showTx("HOUSTON: Alternate manifest loaded. 4-day penalty. We'll recover.");
+  setTimeout(()=>{
+    showResult(true, 'MISSION SKIPPED');
+  }, 2000);
+});
+
+setTimeout(()=>{
+  document.getElementById('intro-screen').style.opacity = '1';
+}, 200);
+</script>
+</body>
+</html>

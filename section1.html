@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journey to Mars — The Last Transmission</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:  #02040A;
+  --rust:   #7A2208;
+  --mars:   #B84016;
+  --flame:  #E8943A;
+  --ember:  #F5A623;
+  --white:  #EDE8E0;
+  --muted:  #4A5568;
+  --dim:    #2D3748;
+  --green:  #1a3a1a;
+  --ocean:  #0a1a2e;
+  --red:    #8B0000;
+  --font-d: 'Bebas Neue', sans-serif;
+  --font-b: 'Rajdhani', sans-serif;
+  --font-m: 'Share Tech Mono', monospace;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--black);
+  cursor: none;
+}
+
+/* ── CUSTOM CURSOR ── */
+#cur-dot {
+  position: fixed; z-index: 9999; width: 8px; height: 8px;
+  background: var(--ember); border-radius: 50%;
+  pointer-events: none; transform: translate(-50%,-50%);
+  mix-blend-mode: screen;
+}
+#cur-ring {
+  position: fixed; z-index: 9998; width: 32px; height: 32px;
+  border: 1px solid rgba(232,148,58,0.4); border-radius: 50%;
+  pointer-events: none; transform: translate(-50%,-50%);
+}
+#cur-cross-h, #cur-cross-v {
+  position: fixed; z-index: 9997;
+  background: rgba(232,148,58,0.25); pointer-events: none;
+  transform: translate(-50%,-50%);
+}
+#cur-cross-h { width: 20px; height: 1px; }
+#cur-cross-v { width: 1px; height: 20px; }
+
+/* ── THREE.JS CANVAS ── */
+#three-canvas { position: fixed; inset: 0; z-index: 0; }
+
+/* ── VIGNETTE ── */
+#vignette {
+  position: fixed; inset: 0; z-index: 1;
+  background: radial-gradient(ellipse at 50% 50%,
+    transparent 25%,
+    rgba(2,4,10,0.45) 55%,
+    rgba(2,4,10,0.88) 78%,
+    rgba(2,4,10,0.98) 100%);
+  pointer-events: none;
+}
+
+/* ── GRAIN ── */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 90;
+  pointer-events: none; opacity: 0.18;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* ── GLITCH OVERLAY (for Earth degradation) ── */
+#glitch-overlay {
+  position: fixed; inset: 0; z-index: 2;
+  pointer-events: none; opacity: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px, transparent 3px,
+    rgba(255,30,0,0.03) 3px, rgba(255,30,0,0.03) 4px
+  );
+}
+
+/* ── RED TINT (Earth dying) ── */
+#red-tint {
+  position: fixed; inset: 0; z-index: 2;
+  pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at 50% 50%,
+    rgba(139,0,0,0.0) 30%,
+    rgba(100,0,0,0.35) 100%);
+}
+
+/* ── SMOKE CANVAS ── */
+#smoke-canvas {
+  position: fixed; inset: 0; z-index: 3;
+  pointer-events: none; opacity: 0;
+}
+
+/* ── ALL TEXT PANELS ── */
+.panel {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+}
+
+/* corner brackets */
+.brk { position: absolute; width: 18px; height: 18px; }
+.brk-tl { top: 20px; left: 20px; border-top: 1px solid var(--dim); border-left: 1px solid var(--dim); }
+.brk-tr { top: 20px; right: 20px; border-top: 1px solid var(--dim); border-right: 1px solid var(--dim); }
+.brk-bl { bottom: 20px; left: 20px; border-bottom: 1px solid var(--dim); border-left: 1px solid var(--dim); }
+.brk-br { bottom: 20px; right: 20px; border-bottom: 1px solid var(--dim); border-right: 1px solid var(--dim); }
+
+/* ── PANEL 1: EARTH INTRO ── */
+#p1 .label {
+  font-family: var(--font-m); font-size: clamp(9px,1.2vw,11px);
+  color: var(--muted); letter-spacing: 0.28em;
+  text-transform: uppercase; margin-bottom: 22px;
+}
+#p1 .big {
+  font-family: var(--font-d);
+  font-size: clamp(62px,11vw,138px);
+  line-height: 0.88; letter-spacing: 0.06em;
+  color: var(--white); text-align: center;
+}
+#p1 .big .earth-word { color: #4a9eff; display: block;
+  text-shadow: 0 0 60px rgba(74,158,255,0.35), 0 0 120px rgba(30,80,180,0.2); }
+#p1 .sub {
+  font-family: var(--font-b); font-size: clamp(14px,2vw,18px);
+  color: var(--muted); font-weight: 300; letter-spacing: 0.05em;
+  margin-top: 24px; text-align: center; line-height: 1.7;
+  max-width: 520px;
+}
+#p1 .year-tag {
+  font-family: var(--font-m); font-size: clamp(9px,1.1vw,11px);
+  color: rgba(74,158,255,0.55); letter-spacing: 0.22em;
+  margin-top: 32px;
+}
+
+/* ── PANEL 2: EARTH DYING ── */
+#p2 { text-align: center; }
+#p2 .warning-tag {
+  font-family: var(--font-m); font-size: clamp(9px,1.2vw,11px);
+  color: #ff4444; letter-spacing: 0.3em;
+  text-transform: uppercase; margin-bottom: 20px;
+  animation: warningBlink 1.2s infinite;
+}
+@keyframes warningBlink {
+  0%,100%{opacity:1} 50%{opacity:0.3}
+}
+#p2 .headline {
+  font-family: var(--font-d);
+  font-size: clamp(48px,9vw,112px);
+  line-height: 0.92; letter-spacing: 0.06em;
+  color: var(--white); text-align: center;
+}
+#p2 .headline .dying { color: #cc2200; display: block;
+  text-shadow: 0 0 50px rgba(200,34,0,0.5); }
+#p2 .stats {
+  display: flex; gap: 36px; justify-content: center;
+  margin-top: 36px; flex-wrap: wrap;
+}
+.d-stat {
+  text-align: center; border: 1px solid rgba(200,34,0,0.2);
+  padding: 14px 22px; border-radius: 3px;
+  background: rgba(139,0,0,0.08);
+}
+.d-stat-num {
+  font-family: var(--font-d); font-size: clamp(26px,4vw,40px);
+  color: #ff4444; letter-spacing: 0.06em; line-height: 1;
+}
+.d-stat-lbl {
+  font-family: var(--font-m); font-size: 9px; color: var(--muted);
+  letter-spacing: 0.14em; margin-top: 5px;
+}
+
+/* ── PANEL 3: TRANSMISSION ── */
+#p3 {
+  align-items: flex-start; justify-content: center;
+  padding: 0 clamp(24px,8vw,200px);
+  max-width: 900px; margin: 0 auto;
+  left: 50%; transform: translateX(-50%);
+  width: 100%;
+}
+.transmission-box {
+  background: rgba(5,8,15,0.7);
+  border: 1px solid rgba(232,148,58,0.15);
+  border-left: 2px solid var(--flame);
+  padding: 28px 32px;
+  backdrop-filter: blur(8px);
+  width: 100%;
+}
+.tx-header {
+  font-family: var(--font-m); font-size: 10px;
+  color: var(--flame); letter-spacing: 0.22em;
+  margin-bottom: 18px; display: flex; gap: 20px;
+}
+.tx-line {
+  font-family: var(--font-m); font-size: clamp(12px,1.6vw,14px);
+  color: var(--white); letter-spacing: 0.06em;
+  line-height: 2.0; opacity: 0;
+}
+.tx-line.muted-line { color: var(--muted); }
+.tx-line.highlight  { color: var(--ember); }
+.tx-cursor {
+  display: inline-block; width: 8px; height: 14px;
+  background: var(--flame); vertical-align: middle;
+  animation: blink 0.9s infinite;
+  margin-left: 2px;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ── PANEL 4: THE CHOICE ── */
+#p4 { text-align: center; }
+#p4 .choice-pre {
+  font-family: var(--font-m); font-size: clamp(9px,1.2vw,11px);
+  color: var(--muted); letter-spacing: 0.26em; margin-bottom: 20px;
+}
+#p4 .choice-title {
+  font-family: var(--font-d);
+  font-size: clamp(42px,8vw,100px);
+  line-height: 0.9; letter-spacing: 0.07em;
+  color: var(--white);
+}
+#p4 .choice-title .mars-word {
+  color: var(--mars); display: block;
+  text-shadow: 0 0 60px rgba(184,64,22,0.4);
+}
+#p4 .choice-body {
+  font-family: var(--font-b); font-size: clamp(14px,1.8vw,17px);
+  color: var(--muted); font-weight: 300; line-height: 1.8;
+  max-width: 560px; margin: 24px auto 0; letter-spacing: 0.04em;
+}
+#p4 .choice-body em { color: var(--white); font-style: normal; }
+#p4 .dist-row {
+  display: flex; gap: 28px; justify-content: center;
+  margin-top: 36px; flex-wrap: wrap;
+}
+.dist-item {
+  font-family: var(--font-m); font-size: 10px;
+  color: var(--dim); letter-spacing: 0.16em;
+  border: 1px solid rgba(45,55,72,0.6);
+  padding: 10px 18px; border-radius: 2px;
+  transition: border-color 0.3s, color 0.3s;
+}
+
+/* ── PANEL 5: DEPARTURE ── */
+#p5 { text-align: center; }
+#p5 .dep-tag {
+  font-family: var(--font-m); font-size: clamp(9px,1.2vw,11px);
+  color: var(--flame); letter-spacing: 0.28em; margin-bottom: 16px;
+}
+#p5 .dep-title {
+  font-family: var(--font-d);
+  font-size: clamp(56px,10vw,124px);
+  line-height: 0.9; letter-spacing: 0.06em;
+  color: var(--white); text-align: center;
+}
+#p5 .dep-title .go { color: var(--ember); display: block;
+  text-shadow: 0 0 50px rgba(245,166,35,0.4); }
+#p5 .dep-sub {
+  font-family: var(--font-b); font-size: clamp(13px,1.7vw,16px);
+  color: var(--muted); font-weight: 300; letter-spacing: 0.05em;
+  margin-top: 20px; line-height: 1.7;
+}
+#p5 .mission-code {
+  font-family: var(--font-m); font-size: clamp(9px,1.2vw,12px);
+  color: rgba(232,148,58,0.4); letter-spacing: 0.2em;
+  margin-top: 30px;
+}
+
+/* ── FIRE CANVAS ── */
+#fire-canvas {
+  position: fixed; inset: 0; z-index: 2;
+  pointer-events: none; opacity: 0;
+}
+
+/* ── NAVBAR (p4 only) ── */
+#s1-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  padding: 20px 40px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(2,4,10,0.85), transparent);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.8s;
+}
+#s1-nav.visible { opacity: 1; pointer-events: all; }
+.nav-logo {
+  font-family: var(--font-d); font-size: 22px;
+  letter-spacing: 0.1em; color: var(--white);
+}
+.nav-logo span { color: var(--mars); }
+.nav-links { display: flex; gap: 32px; }
+.nav-links a {
+  font-family: var(--font-m); font-size: 11px;
+  color: rgba(180,165,145,0.85); text-decoration: none;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  transition: color 0.2s; cursor: none;
+}
+.nav-links a:hover { color: var(--ember); }
+.nav-rule {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 1px; background: rgba(255,255,255,0.06);
+}
+
+@media(max-width:600px){
+  #s1-nav { padding: 14px 20px; }
+  .nav-links { display: none; }
+}
+
+/* fix dist-item to be visible in p4 */
+.dist-item {
+  font-family: var(--font-m); font-size: 10px;
+  color: rgba(180,165,145,0.80); letter-spacing: 0.16em;
+  border: 1px solid rgba(184,64,22,0.35);
+  padding: 10px 18px; border-radius: 2px;
+  background: rgba(184,64,22,0.08);
+  transition: border-color 0.3s, color 0.3s;
+}
+
+/* MARS word in p4 — brighter so it's not hidden by planet */
+#p4 .choice-title .mars-word {
+  color: #ff6030;
+  display: block;
+  text-shadow:
+    0 0 0px #000,
+    0 0 30px rgba(255,96,48,0.8),
+    0 0 60px rgba(255,60,20,0.5);
+  -webkit-text-stroke: 1px rgba(255,80,30,0.3);
+}
+
+/* choice-pre brighter */
+#p4 .choice-pre {
+  font-family: var(--font-m); font-size: clamp(9px,1.2vw,11px);
+  color: rgba(200,185,165,0.9); letter-spacing: 0.26em; margin-bottom: 20px;
+}
+
+/* p4 body text brighter */
+#p4 .choice-body {
+  font-family: var(--font-b); font-size: clamp(14px,1.8vw,17px);
+  color: rgba(160,148,130,0.9); font-weight: 300; line-height: 1.8;
+  max-width: 560px; margin: 24px auto 0; letter-spacing: 0.04em;
+}
+#p4 .choice-body em { color: var(--white); font-style: normal; }
+#trans-overlay {
+  position: fixed; inset: 0; z-index: 80;
+  pointer-events: none; opacity: 0;
+}
+#to-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+#to-dark  { position: absolute; inset: 0; background: var(--black); opacity: 0; }
+
+/* ── SCROLL HINT ── */
+#scroll-hint {
+  position: fixed; bottom: 32px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 20; opacity: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  transition: opacity 0.5s;
+}
+.sh-label {
+  font-family: var(--font-m); font-size: 9px;
+  color: var(--dim); letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.sh-arrow {
+  width: 1px; height: 28px;
+  background: linear-gradient(to bottom, var(--dim), transparent);
+  animation: arrowDrop 1.8s ease-in-out infinite;
+}
+@keyframes arrowDrop {
+  0%  { transform: translateY(-6px); opacity: 0; }
+  40% { opacity: 1; }
+  100%{ transform: translateY(6px);  opacity: 0; }
+}
+
+@keyframes fadeIn  { from{opacity:0}to{opacity:1} }
+@keyframes fadeUp  { from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)} }
+
+@media(max-width:520px){
+  #p1 .big  { font-size: 58px; }
+  #p2 .headline { font-size: 46px; }
+  #p4 .choice-title { font-size: 40px; }
+  #p5 .dep-title { font-size: 54px; }
+  #p3 { padding: 0 20px; }
+  .transmission-box { padding: 18px 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div id="cur-dot"></div>
+<div id="cur-ring"></div>
+<div id="cur-cross-h"></div>
+<div id="cur-cross-v"></div>
+
+<!-- Three.js canvas -->
+<canvas id="three-canvas"></canvas>
+
+<!-- Overlays -->
+<div id="vignette"></div>
+<div id="glitch-overlay"></div>
+<div id="red-tint"></div>
+
+<!-- Fire canvas — drawn on top of planet for burning Earth effect -->
+<canvas id="fire-canvas"></canvas>
+
+<!-- Smoke canvas — full bottom width for p5 -->
+<canvas id="smoke-canvas"></canvas>
+
+<!-- Navbar — visible on panel 4 (WE GO TO MARS) -->
+<nav id="s1-nav">
+  <div class="nav-logo">ARES <span>VII</span></div>
+  <div class="nav-links">
+    <a href="#p1">Earth</a>
+    <a href="#p2">Crisis</a>
+    <a href="#p3">Decision</a>
+    <a href="#p4">Mars</a>
+    <a href="#p5">Launch</a>
+  </div>
+  <div class="nav-rule"></div>
+</nav>
+
+<!-- ── PANEL 1: EARTH ── -->
+<div class="panel" id="p1">
+  <div class="brk brk-tl"></div><div class="brk brk-tr"></div>
+  <div class="brk brk-bl"></div><div class="brk brk-br"></div>
+  <div class="label">Houston, TX — Year 2047</div>
+  <div class="big">
+    THIS IS<br>
+    <span class="earth-word">EARTH.</span>
+  </div>
+  <p class="sub">Home to 12 billion people.<br>The only world we have ever known.</p>
+  <div class="year-tag">CURRENT POPULATION DENSITY: CRITICAL</div>
+</div>
+
+<!-- ── PANEL 2: DYING ── -->
+<div class="panel" id="p2">
+  <div class="warning-tag">⚠ CRITICAL ALERT — GLOBAL STATUS</div>
+  <div class="headline">
+    EARTH IS<br>
+    <span class="dying">RUNNING OUT.</span>
+  </div>
+  <div class="stats">
+    <div class="d-stat">
+      <div class="d-stat-num">+2.9°C</div>
+      <div class="d-stat-lbl">Avg Temperature Rise</div>
+    </div>
+    <div class="d-stat">
+      <div class="d-stat-num">68%</div>
+      <div class="d-stat-lbl">Wildlife Lost Since 1970</div>
+    </div>
+    <div class="d-stat">
+      <div class="d-stat-num">40yr</div>
+      <div class="d-stat-lbl">Estimated Habitable Window</div>
+    </div>
+    <div class="d-stat">
+      <div class="d-stat-num">12B</div>
+      <div class="d-stat-lbl">People. One Planet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PANEL 3: HOUSTON TRANSMISSION ── -->
+<div class="panel" id="p3">
+  <div class="brk brk-tl"></div><div class="brk brk-tr"></div>
+  <div class="transmission-box">
+    <div class="tx-header">
+      <span>HOUSTON TRANSMISSION</span>
+      <span style="color:var(--dim)">MET 00:00:00</span>
+      <span style="color:var(--dim)">SIGNAL: STRONG</span>
+    </div>
+    <div class="tx-line" id="tl1">HOUSTON: &nbsp;"Earth cannot sustain us.</div>
+    <div class="tx-line muted-line" id="tl2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Not much longer.</div>
+    <div class="tx-line" id="tl3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The oceans are rising.</div>
+    <div class="tx-line muted-line" id="tl4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The forests are burning.</div>
+    <div class="tx-line" id="tl5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;We have run the numbers</div>
+    <div class="tx-line muted-line" id="tl6">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ten thousand times.</div>
+    <div class="tx-line highlight" id="tl7">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;There is only one answer.</div>
+    <div class="tx-line" id="tl8" style="margin-top:12px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;We go to Mars."</div>
+    <div class="tx-line" id="tl9" style="margin-top:8px"><span class="tx-cursor"></span></div>
+  </div>
+</div>
+
+<!-- ── PANEL 4: THE CHOICE ── -->
+<div class="panel" id="p4">
+  <div class="brk brk-tl"></div><div class="brk brk-tr"></div>
+  <div class="brk brk-bl"></div><div class="brk brk-br"></div>
+  <div class="choice-pre">The only option remaining</div>
+  <div class="choice-title">
+    WE GO TO<br>
+    <span class="mars-word">MARS.</span>
+  </div>
+  <p class="choice-body">
+    225 million kilometres away.<br>
+    Our <em>nearest neighbour</em> in the solar system.<br>
+    The only planet that could sustain human life.<br>
+    <em>The only way forward.</em>
+  </p>
+  <div class="dist-row">
+    <div class="dist-item">DISTANCE — 225,000,000 KM</div>
+    <div class="dist-item">TRANSIT TIME — 7 MONTHS</div>
+    <div class="dist-item">MISSION YEAR — 2047</div>
+  </div>
+</div>
+
+<!-- ── PANEL 5: DEPARTURE ── -->
+<div class="panel" id="p5">
+  <div class="brk brk-tl"></div><div class="brk brk-tr"></div>
+  <div class="brk brk-bl"></div><div class="brk brk-br"></div>
+  <div class="dep-tag">Mission Ares VII · Initiating</div>
+  <div class="dep-title">
+    WE ARE<br>
+    <span class="go">GO.</span>
+  </div>
+  <p class="dep-sub">Six crew. One ship.<br>The weight of twelve billion lives.</p>
+  <div class="mission-code">ARES VII · LAUNCH WINDOW: T-MINUS 00:00:00</div>
+</div>
+
+<!-- Scroll hint -->
+<div id="scroll-hint">
+  <div class="sh-label">Scroll to continue</div>
+  <div class="sh-arrow"></div>
+</div>
+
+<!-- Transition overlay -->
+<div id="trans-overlay">
+  <div id="to-flash"></div>
+  <div id="to-dark"></div>
+</div>
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+<script>
+/* ══════════════════════════════
+   CURSOR
+══════════════════════════════ */
+const curDot=document.getElementById('cur-dot'),
+      curRing=document.getElementById('cur-ring'),
+      curH=document.getElementById('cur-cross-h'),
+      curV=document.getElementById('cur-cross-v');
+let mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function cl(){
+  curDot.style.cssText+=`left:${mx}px;top:${my}px;`;
+  curH.style.cssText+=`left:${mx}px;top:${my}px;`;
+  curV.style.cssText+=`left:${mx}px;top:${my}px;`;
+  rx+=(mx-rx)*.11;ry+=(my-ry)*.11;
+  curRing.style.cssText+=`left:${rx}px;top:${ry}px;`;
+  requestAnimationFrame(cl);
+})();
+
+/* ══════════════════════════════
+   THREE.JS — EARTH → MARS
+══════════════════════════════ */
+const c3=document.getElementById('three-canvas');
+const renderer=new THREE.WebGLRenderer({canvas:c3,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.setClearColor(0x000000,0);
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(44,innerWidth/innerHeight,0.1,500);
+camera.position.z=2.6;
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+/* ── Earth texture ── */
+function makeEarthTex(){
+  const S=1024,cv=document.createElement('canvas');
+  cv.width=cv.height=S;
+  const cx=cv.getContext('2d');
+
+  // deep ocean base — brighter blue
+  cx.fillStyle='#0d2a50'; cx.fillRect(0,0,S,S);
+
+  // ocean variations
+  [[0.3,0.5,0.35,'rgba(10,30,80,0.7)'],[0.7,0.4,0.28,'rgba(8,25,70,0.65)'],
+   [0.5,0.7,0.30,'rgba(12,35,90,0.6)'],[0.15,0.3,0.20,'rgba(15,40,95,0.55)']
+  ].forEach(([x,y,r,c])=>{
+    const g=cx.createRadialGradient(x*S,y*S,0,x*S,y*S,r*S);
+    g.addColorStop(0,c);g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=g;cx.fillRect(0,0,S,S);
+  });
+
+  // continents — green/brown landmasses
+  const lands=[
+    // North America
+    {pts:[[0.12,0.28],[0.22,0.18],[0.30,0.22],[0.28,0.38],[0.18,0.44],[0.10,0.36]],col:'#1a3a10'},
+    // South America
+    {pts:[[0.22,0.48],[0.28,0.44],[0.32,0.56],[0.28,0.70],[0.20,0.68],[0.18,0.56]],col:'#1e3e12'},
+    // Europe/Africa
+    {pts:[[0.46,0.22],[0.54,0.18],[0.58,0.30],[0.56,0.50],[0.50,0.65],[0.44,0.58],[0.42,0.38],[0.44,0.28]],col:'#1c3c10'},
+    // Asia
+    {pts:[[0.58,0.18],[0.78,0.16],[0.86,0.26],[0.82,0.40],[0.70,0.44],[0.60,0.38],[0.56,0.28]],col:'#1a3a0e'},
+    // Australia
+    {pts:[[0.74,0.56],[0.84,0.52],[0.88,0.62],[0.82,0.68],[0.72,0.64]],col:'#2a4018'},
+    // Antarctica
+    {pts:[[0.15,0.88],[0.85,0.88],[0.85,0.96],[0.15,0.96]],col:'#dde8ee'},
+  ];
+  lands.forEach(({pts,col})=>{
+    cx.beginPath();
+    cx.moveTo(pts[0][0]*S,pts[0][1]*S);
+    pts.slice(1).forEach(p=>cx.lineTo(p[0]*S,p[1]*S));
+    cx.closePath();
+    cx.fillStyle=col; cx.fill();
+    // soften edges
+    cx.filter='blur(12px)';
+    cx.fillStyle=col; cx.fill();
+    cx.filter='none';
+  });
+
+  // cloud wisps
+  [[0.25,0.20,0.18],[0.60,0.32,0.14],[0.40,0.55,0.16],[0.70,0.60,0.12]].forEach(([x,y,r])=>{
+    const g=cx.createRadialGradient(x*S,y*S,0,x*S,y*S,r*S);
+    g.addColorStop(0,'rgba(255,255,255,0.28)');
+    g.addColorStop(0.5,'rgba(240,240,255,0.12)');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=g;cx.fillRect(0,0,S,S);
+  });
+
+  // noise
+  const id=cx.getImageData(0,0,S,S);
+  for(let i=0;i<id.data.length;i+=4){
+    const n=(Math.random()-.5)*14;
+    id.data[i]=Math.min(255,Math.max(0,id.data[i]+n));
+    id.data[i+1]=Math.min(255,Math.max(0,id.data[i+1]+n*.8));
+    id.data[i+2]=Math.min(255,Math.max(0,id.data[i+2]+n*.6));
+  }
+  cx.putImageData(id,0,0);
+  return new THREE.CanvasTexture(cv);
+}
+
+/* ── Degraded Earth texture (dying) ── */
+function makeDyingTex(){
+  const S=1024,cv=document.createElement('canvas');
+  cv.width=cv.height=S;
+  const cx=cv.getContext('2d');
+  cx.fillStyle='#1a0a04'; cx.fillRect(0,0,S,S);
+
+  // burnt browns
+  [[0.3,0.5,0.4,'rgba(80,30,5,0.85)'],[0.65,0.35,0.35,'rgba(70,20,4,0.80)'],
+   [0.5,0.7,0.32,'rgba(90,35,6,0.75)'],[0.15,0.3,0.25,'rgba(60,18,3,0.78)']
+  ].forEach(([x,y,r,c])=>{
+    const g=cx.createRadialGradient(x*S,y*S,0,x*S,y*S,r*S);
+    g.addColorStop(0,c);g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=g;cx.fillRect(0,0,S,S);
+  });
+
+  // fire hotspots
+  [[0.28,0.32,0.08,'rgba(200,80,10,0.55)'],[0.62,0.25,0.06,'rgba(180,60,8,0.50)'],
+   [0.45,0.60,0.07,'rgba(220,100,12,0.48)'],[0.80,0.55,0.05,'rgba(190,70,9,0.45)']
+  ].forEach(([x,y,r,c])=>{
+    const g=cx.createRadialGradient(x*S,y*S,0,x*S,y*S,r*S);
+    g.addColorStop(0,c);g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=g;cx.fillRect(0,0,S,S);
+  });
+
+  // shrunken ocean — dark grey
+  [[0.7,0.5,0.22,'rgba(20,20,30,0.6)'],[0.15,0.55,0.16,'rgba(15,15,25,0.5)']
+  ].forEach(([x,y,r,c])=>{
+    const g=cx.createRadialGradient(x*S,y*S,0,x*S,y*S,r*S);
+    g.addColorStop(0,c);g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=g;cx.fillRect(0,0,S,S);
+  });
+
+  const id=cx.getImageData(0,0,S,S);
+  for(let i=0;i<id.data.length;i+=4){
+    const n=(Math.random()-.5)*20;
+    id.data[i]=Math.min(255,Math.max(0,id.data[i]+n));
+    id.data[i+1]=Math.min(255,Math.max(0,id.data[i+1]+n*.3));
+    id.data[i+2]=Math.min(255,Math.max(0,id.data[i+2]+n*.15));
+  }
+  cx.putImageData(id,0,0);
+  return new THREE.CanvasTexture(cv);
+}
+
+/* ── Mars texture (minimal — full version on mars-loading.html) ── */
+function makeMarsTexFast(){
+  const S=512,cv=document.createElement('canvas');
+  cv.width=cv.height=S;
+  const cx=cv.getContext('2d');
+  cx.fillStyle='#5C1A08';cx.fillRect(0,0,S,S);
+  [[0.3,0.4,0.3,'rgba(140,42,12,0.9)'],[0.65,0.5,0.28,'rgba(120,35,8,0.85)'],
+   [0.50,0.70,0.22,'rgba(165,58,18,0.75)']].forEach(([x,y,r,c])=>{
+    const g=cx.createRadialGradient(x*S,y*S,0,x*S,y*S,r*S);
+    g.addColorStop(0,c);g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=g;cx.fillRect(0,0,S,S);
+  });
+  return new THREE.CanvasTexture(cv);
+}
+
+const earthTex  = makeEarthTex();
+const dyingTex  = makeDyingTex();
+const marsTex   = makeMarsTexFast();
+
+/* ── Create spheres ── */
+const sGeo = new THREE.SphereGeometry(1, 72, 72);
+
+const earthMat = new THREE.MeshStandardMaterial({
+  map: earthTex, roughness: 0.62, metalness: 0.0,
+});
+const earthMesh = new THREE.Mesh(sGeo, earthMat);
+scene.add(earthMesh);
+
+const marsMat = new THREE.MeshStandardMaterial({
+  map: marsTex, roughness: 0.58, metalness: 0.0,
+  opacity: 0, transparent: true,
+});
+const marsMesh = new THREE.Mesh(sGeo, marsMat);
+marsMesh.position.x = 0;
+marsMesh.scale.set(0.001, 0.001, 0.001);
+scene.add(marsMesh);
+
+/* Stars */
+const sGe=new THREE.BufferGeometry();
+const sP=new Float32Array(2000*3);
+for(let i=0;i<sP.length;i++)sP[i]=(Math.random()-.5)*220;
+sGe.setAttribute('position',new THREE.BufferAttribute(sP,3));
+const starMesh=new THREE.Points(sGe,
+  new THREE.PointsMaterial({color:0xccc8c0,size:0.09,transparent:true,opacity:0.5,sizeAttenuation:true}));
+scene.add(starMesh);
+
+/* Lighting — vivid but not overblown */
+scene.add(new THREE.AmbientLight(0x203050, 0.52));
+const sun=new THREE.DirectionalLight(0xffd090,2.0);
+sun.position.set(-2.2,1.4,1.8); scene.add(sun);
+const fill=new THREE.DirectionalLight(0x4070cc, 0.30);
+fill.position.set(1.8, 0.6, 1.4); scene.add(fill);
+const rim=new THREE.DirectionalLight(0x204060,0.22);
+rim.position.set(2.4,-0.8,-1.4); scene.add(rim);
+
+/* Mouse parallax */
+let pX=0,pY=0;
+addEventListener('mousemove',e=>{
+  pX=(e.clientX/innerWidth -.5)*.06;
+  pY=(e.clientY/innerHeight-.5)*.04;
+});
+
+let rotSpd=0.0009;
+let showMars=false;
+
+(function render(){
+  requestAnimationFrame(render);
+  earthMesh.rotation.y+=rotSpd;
+  earthMesh.rotation.z+=(pX*.25-earthMesh.rotation.z)*.03;
+  marsMesh.rotation.y +=rotSpd*0.8;
+  starMesh.rotation.y +=0.00003;
+  renderer.render(scene,camera);
+})();
+
+/* ══════════════════════════════
+   FIRE CANVAS — burning earth effect
+══════════════════════════════ */
+const fireC  = document.getElementById('fire-canvas');
+const firex  = fireC.getContext('2d');
+let fireW, fireH, fireOn=false, fireIntensity=0;
+const fireParts=[];
+
+function rsF(){ fireW=fireC.width=innerWidth; fireH=fireC.height=innerHeight; }
+rsF(); addEventListener('resize',rsF);
+
+function spawnFire(){
+  /* fires spawn around the planet — centred with spread */
+  const cx=fireW/2, cy=fireH/2;
+  const angle=Math.random()*Math.PI*2;
+  const radius=fireH*0.22 + (Math.random()-0.5)*fireH*0.08;
+  const bx=cx+Math.cos(angle)*radius;
+  const by=cy+Math.sin(angle)*radius;
+  const n=Math.ceil(fireIntensity*3);
+  for(let i=0;i<n;i++){
+    fireParts.push({
+      x:bx+(Math.random()-.5)*30,
+      y:by+(Math.random()-.5)*30,
+      vx:(Math.random()-.5)*0.8,
+      vy:-(Math.random()*2.5+1.0),
+      r:Math.random()*18+6,
+      life:1.0,
+      decay:Math.random()*0.022+0.012,
+      /* random between orange, red, yellow */
+      hue:Math.floor(Math.random()*40), /* 0=red, 40=orange */
+    });
+  }
+}
+
+(function fireLoop(){
+  requestAnimationFrame(fireLoop);
+  firex.clearRect(0,0,fireW,fireH);
+  if(fireOn && fireIntensity>0) spawnFire();
+  for(let i=fireParts.length-1;i>=0;i--){
+    const p=fireParts[i];
+    p.x+=p.vx; p.y+=p.vy; p.r+=0.4;
+    p.vx*=0.97; p.life-=p.decay;
+    if(p.life<=0){fireParts.splice(i,1);continue;}
+    const gr=firex.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+    const a=p.life*0.55;
+    /* inner bright core → outer dark ember */
+    gr.addColorStop(0,  `hsla(${p.hue+30},100%,85%,${a})`);
+    gr.addColorStop(0.3,`hsla(${p.hue+10},100%,60%,${a*0.8})`);
+    gr.addColorStop(0.6,`hsla(${p.hue},90%,35%,${a*0.5})`);
+    gr.addColorStop(1,  'rgba(0,0,0,0)');
+    firex.beginPath();
+    firex.arc(p.x,p.y,p.r,0,Math.PI*2);
+    firex.fillStyle=gr; firex.fill();
+  }
+})();
+
+/* ══════════════════════════════
+   SMOKE CANVAS — full bottom for p5
+══════════════════════════════ */
+const smkC  = document.getElementById('smoke-canvas');
+const smkx  = smkC.getContext('2d');
+let smkW,smkH,smokeOn=false;
+const smkParts=[];
+
+function rsS(){ smkW=smkC.width=innerWidth; smkH=smkC.height=innerHeight; }
+rsS(); addEventListener('resize',rsS);
+
+function spawnSmoke(){
+  /* full width of bottom edge — same as mars-loading */
+  const n=5;
+  for(let i=0;i<n;i++){
+    smkParts.push({
+      x: Math.random()*smkW,
+      y: smkH+8,
+      vx:(Math.random()-.5)*1.3,
+      vy:-(Math.random()*2.8+1.0),
+      r: Math.random()*52+20,
+      life:1.0,
+      decay:Math.random()*0.005+0.003,
+      g:Math.floor(Math.random()*35+90),
+    });
+  }
+}
+
+(function smkLoop(){
+  requestAnimationFrame(smkLoop);
+  smkx.clearRect(0,0,smkW,smkH);
+  if(smokeOn) spawnSmoke();
+  for(let i=smkParts.length-1;i>=0;i--){
+    const p=smkParts[i];
+    p.x+=p.vx; p.y+=p.vy; p.r+=0.65;
+    p.vx*=0.990; p.life-=p.decay;
+    if(p.life<=0){smkParts.splice(i,1);continue;}
+    const gr=smkx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+    const a=p.life*0.22;
+    gr.addColorStop(0,  `rgba(${p.g+28},${p.g+8},${p.g-18},${a})`);
+    gr.addColorStop(0.5,`rgba(${p.g},${p.g-10},${p.g-28},${a*0.5})`);
+    gr.addColorStop(1,  'rgba(0,0,0,0)');
+    smkx.beginPath(); smkx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    smkx.fillStyle=gr; smkx.fill();
+  }
+})();
+
+/* ══════════════════════════════
+   STORY SEQUENCE — scroll-driven
+══════════════════════════════ */
+const panels=['p1','p2','p3','p4','p5'].map(id=>document.getElementById(id));
+const scrollHint=document.getElementById('scroll-hint');
+const s1nav=document.getElementById('s1-nav');
+let currentPanel=0;
+let transitioning=false;
+
+function showPanel(idx){
+  if(transitioning)return;
+  transitioning=true;
+  const prev=panels[currentPanel];
+  const next=panels[idx];
+
+  gsap.timeline({onComplete:()=>{
+    currentPanel=idx;
+    transitioning=false;
+    if(idx<panels.length-1){
+      gsap.to(scrollHint,{opacity:1,duration:0.6,delay:1.0});
+    } else {
+      gsap.to(scrollHint,{opacity:0,duration:0.4});
+    }
+  }})
+  .to(prev,{opacity:0,duration:0.7,ease:'power2.in'})
+  .add(()=>{ onPanelEnter(idx); })
+  .to(next,{opacity:1,duration:0.9,ease:'power2.out',pointerEvents:'all'});
+}
+
+function resetTweens(){
+  gsap.killTweensOf([earthMesh.scale,earthMesh.position,
+                     marsMesh.scale, marsMesh.position,
+                     earthMat,marsMat,sun.color,
+                     fireC,smkC,
+                     document.getElementById('glitch-overlay'),
+                     document.getElementById('red-tint')]);
+}
+
+const txLines=['tl1','tl2','tl3','tl4','tl5','tl6','tl7','tl8'];
+function resetTxLines(){
+  txLines.forEach(id=>{
+    gsap.killTweensOf(document.getElementById(id));
+    gsap.set(document.getElementById(id),{opacity:0});
+  });
+}
+
+let nextPageTimer=null;
+
+function onPanelEnter(idx){
+  gsap.to(scrollHint,{opacity:0,duration:0.3});
+  if(nextPageTimer){clearTimeout(nextPageTimer);nextPageTimer=null;}
+  resetTweens();
+
+  /* hide navbar by default, show only on p3 */
+  if(idx===3){
+    s1nav.classList.add('visible');
+  } else {
+    s1nav.classList.remove('visible');
+  }
+
+  /* ── P0: EARTH healthy ── */
+  if(idx===0){
+    rotSpd=0.0009;
+    earthMat.map=earthTex; earthMat.needsUpdate=true;
+    gsap.to(earthMat,{opacity:1,duration:1.0});
+    gsap.to(earthMesh.scale,{x:1,y:1,z:1,duration:1.4,ease:'power2.out'});
+    gsap.to(earthMesh.position,{x:0,y:0,z:0,duration:1.4,ease:'power2.out'});
+    gsap.to(marsMat,{opacity:0,duration:0.6});
+    gsap.to(marsMesh.scale,{x:0.001,y:0.001,z:0.001,duration:0.6});
+    gsap.to(sun.color,{r:0.94,g:0.75,b:0.56,duration:2.0});
+    gsap.to([document.getElementById('glitch-overlay'),
+             document.getElementById('red-tint')],{opacity:0,duration:1.2});
+    /* kill fire */
+    fireOn=false; fireIntensity=0;
+    gsap.to(fireC,{opacity:0,duration:0.8});
+    smokeOn=false;
+    gsap.to(smkC,{opacity:0,duration:0.8});
+    resetTxLines();
+  }
+
+  /* ── P1: EARTH dying — smooth crossfade texture + fire starts ── */
+  if(idx===1){
+    rotSpd=0.0014;
+    gsap.to(earthMesh.scale,{x:1,y:1,z:1,duration:1.0,ease:'power2.out'});
+    gsap.to(earthMesh.position,{x:0,y:0,z:0,duration:1.0,ease:'power2.out'});
+    gsap.to(marsMat,{opacity:0,duration:0.5});
+    gsap.to(marsMesh.scale,{x:0.001,y:0.001,z:0.001,duration:0.5});
+
+    /* smooth crossfade: fade down, swap map, fade back up — longer = smoother */
+    gsap.timeline()
+      .to(earthMat,{opacity:0,duration:1.4,ease:'power1.inOut'})
+      .add(()=>{ earthMat.map=dyingTex; earthMat.needsUpdate=true; })
+      .to(earthMat,{opacity:1,duration:1.8,ease:'power1.inOut'});
+
+    gsap.to(sun.color,{r:0.88,g:0.28,b:0.06,duration:2.5});
+    gsap.to(document.getElementById('glitch-overlay'),{opacity:1,duration:2.2});
+    gsap.to(document.getElementById('red-tint'),{opacity:0.85,duration:2.8});
+
+    /* fire starts mild then builds */
+    fireOn=true; fireIntensity=0;
+    gsap.to(fireC,{opacity:1,duration:1.5});
+    gsap.to({v:0},{v:1,duration:3.5,ease:'power2.in',
+      onUpdate:function(){ fireIntensity=this.targets()[0].v; }});
+
+    smokeOn=false;
+    gsap.to(smkC,{opacity:0,duration:0.6});
+    resetTxLines();
+  }
+
+  /* ── P2: Transmission — earth burning continues ── */
+  if(idx===2){
+    rotSpd=0.0012;
+    gsap.to(earthMesh.scale,{x:1,y:1,z:1,duration:0.8,ease:'power2.out'});
+    gsap.to(earthMesh.position,{x:0,y:0,z:0,duration:0.8,ease:'power2.out'});
+    earthMat.map=dyingTex; earthMat.needsUpdate=true;
+    gsap.to(earthMat,{opacity:1,duration:0.6});
+    gsap.to(marsMat,{opacity:0,duration:0.4});
+    gsap.to(marsMesh.scale,{x:0.001,y:0.001,z:0.001,duration:0.4});
+    gsap.to(document.getElementById('glitch-overlay'),{opacity:0.5,duration:1.0});
+    gsap.to(document.getElementById('red-tint'),{opacity:0.6,duration:1.0});
+
+    /* fire at medium intensity */
+    fireOn=true; fireIntensity=0.6;
+    gsap.to(fireC,{opacity:0.8,duration:0.8});
+
+    smokeOn=false;
+    gsap.to(smkC,{opacity:0,duration:0.6});
+
+    resetTxLines();
+    txLines.forEach((id,i)=>{
+      gsap.to(document.getElementById(id),{
+        opacity:1,duration:0.45,delay:0.5+i*0.48
+      });
+    });
+  }
+
+  /* ── P3: WE GO TO MARS — earth shrinks, mars rises, navbar shows ── */
+  if(idx===3){
+    rotSpd=0.0007;
+    /* fade fire out */
+    fireOn=false;
+    gsap.to(fireC,{opacity:0,duration:1.2});
+    gsap.to({v:fireIntensity},{v:0,duration:1.2,
+      onUpdate:function(){ fireIntensity=this.targets()[0].v; }});
+
+    smokeOn=false;
+    gsap.to(smkC,{opacity:0,duration:0.8});
+    gsap.to(document.getElementById('glitch-overlay'),{opacity:0,duration:1.8});
+    gsap.to(document.getElementById('red-tint'),{opacity:0.2,duration:1.8});
+    gsap.to(sun.color,{r:0.95,g:0.62,b:0.40,duration:2.0});
+
+    /* earth shrinks left */
+    gsap.to(earthMesh.scale,{x:0.40,y:0.40,z:0.40,duration:2.2,ease:'power2.inOut'});
+    gsap.to(earthMesh.position,{x:-1.1,y:0,z:0,duration:2.2,ease:'power2.inOut'});
+
+    /* mars grows from right */
+    gsap.set(marsMesh.position,{x:1.1,y:0,z:0});
+    gsap.set(marsMesh.scale,{x:0.001,y:0.001,z:0.001});
+    gsap.to(marsMesh.scale,{x:0.70,y:0.70,z:0.70,duration:2.4,delay:0.3,ease:'power2.inOut'});
+    gsap.to(marsMat,{opacity:1,duration:2.0,delay:0.4});
+  }
+
+  /* ── P4: WE ARE GO — full Mars, smoke from bottom ── */
+  if(idx===4){
+    rotSpd=0.0018;
+    fireOn=false; fireIntensity=0;
+    gsap.to(fireC,{opacity:0,duration:0.6});
+
+    gsap.to(earthMesh.scale,{x:0.001,y:0.001,z:0.001,duration:1.8,ease:'power3.in'});
+    gsap.to(earthMesh.position,{x:-3.5,y:0,z:0,duration:1.8,ease:'power3.in'});
+    gsap.to(marsMesh.scale,{x:1.0,y:1.0,z:1.0,duration:2.2,delay:0.2,ease:'power2.inOut'});
+    gsap.to(marsMesh.position,{x:0,y:0,z:0,duration:2.2,delay:0.2,ease:'power2.inOut'});
+    gsap.to(marsMat,{opacity:1,duration:1.0});
+    gsap.to(document.getElementById('red-tint'),{opacity:0,duration:1.2});
+    gsap.to(document.getElementById('glitch-overlay'),{opacity:0,duration:1.0});
+
+    /* smoke rises from full bottom after 1s */
+    setTimeout(()=>{
+      smokeOn=true;
+      gsap.to(smkC,{opacity:1,duration:1.4});
+    },1000);
+
+    nextPageTimer=setTimeout(goToNextPage,5200);
+  }
+}
+
+function goToNextPage(){
+  if(transitioning)return; transitioning=true;
+  const ov=document.getElementById('trans-overlay');
+  const fl=document.getElementById('to-flash');
+  const dk=document.getElementById('to-dark');
+  gsap.set(ov,{opacity:1});
+  gsap.timeline()
+    .to(fl,{opacity:1,duration:0.1})
+    .to(fl,{opacity:0,duration:0.5})
+    .to(dk,{opacity:1,duration:1.8,ease:'power2.inOut'})
+    .add(()=>{ window.location.href='section2.html'; },'+=0.2');
+}
+
+/* ══════════════════════════════
+   SCROLL / KEY / TOUCH NAVIGATION
+══════════════════════════════ */
+let lastWheel=0;
+addEventListener('wheel',e=>{
+  const now=Date.now();
+  if(now-lastWheel<1000)return;
+  lastWheel=now;
+  if(transitioning)return;
+  if(e.deltaY>0 && currentPanel<panels.length-1) showPanel(currentPanel+1);
+  else if(e.deltaY<0 && currentPanel>0) showPanel(currentPanel-1);
+},{passive:true});
+
+let touchY=0;
+addEventListener('touchstart',e=>{touchY=e.touches[0].clientY;},{passive:true});
+addEventListener('touchend',e=>{
+  const dy=touchY-e.changedTouches[0].clientY;
+  if(Math.abs(dy)<40)return;
+  if(transitioning)return;
+  const now=Date.now();
+  if(now-lastWheel<1000)return;
+  lastWheel=now;
+  if(dy>0&&currentPanel<panels.length-1) showPanel(currentPanel+1);
+  else if(dy<0&&currentPanel>0) showPanel(currentPanel-1);
+},{passive:true});
+
+addEventListener('keydown',e=>{
+  if(transitioning)return;
+  const now=Date.now();
+  if(now-lastWheel<1000)return;
+  if(e.key==='ArrowDown'||e.key==='PageDown'){
+    if(currentPanel<panels.length-1){lastWheel=now;showPanel(currentPanel+1);}
+  }
+  if(e.key==='ArrowUp'||e.key==='PageUp'){
+    if(currentPanel>0){lastWheel=now;showPanel(currentPanel-1);}
+  }
+});
+
+/* ══════════════════════════════
+   BOOT — show p1
+══════════════════════════════ */
+gsap.to(panels[0],{opacity:1,duration:1.4,delay:0.3,pointerEvents:'all'});
+gsap.to(scrollHint,{opacity:1,duration:0.6,delay:2.5});
+earthMesh.scale.set(1,1,1);
+earthMesh.position.set(0,0,0);
+</script>
+</body>
+</html>

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journey to Mars — The Void</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:  #02040A;
+  --rust:   #7A2208;
+  --mars:   #B84016;
+  --flame:  #E8943A;
+  --ember:  #F5A623;
+  --white:  #EDE8E0;
+  --muted:  #4A5568;
+  --dim:    #2D3748;
+  --accent: #4FC3F7;
+  --font-d: 'Bebas Neue', sans-serif;
+  --font-b: 'Rajdhani', sans-serif;
+  --font-m: 'Share Tech Mono', monospace;
+}
+
+html, body { width:100%; height:100%; overflow:hidden; background:var(--black); cursor:none; }
+
+/* CURSOR */
+#cur-dot {
+  position:fixed; z-index:9999; width:8px; height:8px;
+  background:var(--accent); border-radius:50%;
+  pointer-events:none; transform:translate(-50%,-50%);
+  mix-blend-mode:screen;
+}
+#cur-ring {
+  position:fixed; z-index:9998; width:32px; height:32px;
+  border:1px solid rgba(79,195,247,0.35); border-radius:50%;
+  pointer-events:none; transform:translate(-50%,-50%);
+}
+#cur-h, #cur-v {
+  position:fixed; z-index:9997;
+  background:rgba(79,195,247,0.2); pointer-events:none;
+  transform:translate(-50%,-50%);
+}
+#cur-h { width:18px; height:1px; }
+#cur-v { width:1px;  height:18px; }
+
+/* CANVASES */
+#star-canvas { position:fixed; inset:0; z-index:0; }
+#ship-canvas { position:fixed; inset:0; z-index:1; pointer-events:none; }
+
+/* GRAIN */
+body::before {
+  content:''; position:fixed; inset:0; z-index:95;
+  pointer-events:none; opacity:0.15;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* VIGNETTE */
+#vignette {
+  position:fixed; inset:0; z-index:2; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 50%,
+    transparent 30%, rgba(2,4,10,0.52) 60%,
+    rgba(2,4,10,0.90) 82%, rgba(2,4,10,0.99) 100%);
+}
+
+/* ══════════════════════════════
+   LOADING SCREEN
+══════════════════════════════ */
+#loader {
+  position:fixed; inset:0; z-index:80;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background:var(--black);
+}
+#loader.out { opacity:0; pointer-events:none; transition:opacity 1.4s ease; }
+
+.ld-brk { position:absolute; width:18px; height:18px; }
+.ld-brk-tl { top:22px; left:22px; border-top:1px solid var(--dim); border-left:1px solid var(--dim); }
+.ld-brk-tr { top:22px; right:22px; border-top:1px solid var(--dim); border-right:1px solid var(--dim); }
+.ld-brk-bl { bottom:22px; left:22px; border-bottom:1px solid var(--dim); border-left:1px solid var(--dim); }
+.ld-brk-br { bottom:22px; right:22px; border-bottom:1px solid var(--dim); border-right:1px solid var(--dim); }
+
+.ld-corner {
+  position:absolute; font-family:var(--font-m);
+  font-size:9px; color:rgba(140,130,115,0.65);
+  letter-spacing:0.14em; line-height:1.9;
+}
+.cl-tl { top:28px; left:36px; }
+.cl-tr { top:28px; right:36px; text-align:right; }
+.cl-bl { bottom:28px; left:36px; }
+.cl-br { bottom:28px; right:36px; text-align:right; }
+
+.ld-day {
+  font-family:var(--font-m);
+  font-size:clamp(10px,1.3vw,12px);
+  color:var(--accent); letter-spacing:0.34em;
+  text-transform:uppercase; margin-bottom:20px;
+  opacity:0; animation:fadeUp 0.8s 0.3s forwards;
+}
+.ld-title {
+  font-family:var(--font-d);
+  font-size:clamp(56px,12vw,152px);
+  line-height:0.86; letter-spacing:0.06em;
+  color:var(--white); text-align:center;
+  opacity:0; animation:fadeUp 1s 0.55s forwards;
+}
+.ld-title .sub { display:block; color:rgba(237,232,224,0.16); font-size:0.40em; letter-spacing:0.22em; margin-bottom:6px; }
+.ld-title .main { display:block; }
+.ld-title .accent { display:block; color:var(--accent);
+  text-shadow:0 0 48px rgba(79,195,247,0.38),0 0 100px rgba(40,140,200,0.2); }
+
+.ld-tagline {
+  font-family:var(--font-b);
+  font-size:clamp(13px,1.8vw,17px);
+  color:var(--muted); font-weight:300;
+  letter-spacing:0.06em; margin-top:22px;
+  text-align:center; line-height:1.75; max-width:460px;
+  opacity:0; animation:fadeUp 0.8s 0.85s forwards;
+}
+.ld-tagline em { color:rgba(200,190,175,0.72); font-style:normal; }
+
+.ld-div {
+  width:1px; height:42px; margin:26px auto;
+  background:linear-gradient(to bottom,transparent,var(--dim),transparent);
+  opacity:0; animation:fadeIn 0.6s 1.1s forwards;
+}
+
+/* terminal */
+.ld-terminal {
+  font-family:var(--font-m);
+  font-size:clamp(9px,1.2vw,11px);
+  color:var(--accent); letter-spacing:0.13em;
+  line-height:2.1; text-align:left; white-space:pre;
+  min-height:82px;
+  opacity:0; animation:fadeIn 0.6s 1.3s forwards;
+}
+#ld-cursor-blink {
+  display:inline-block; width:8px; height:13px;
+  background:var(--accent); vertical-align:middle;
+  animation:blink 0.85s infinite;
+}
+
+/* progress */
+.ld-prog-wrap {
+  width:min(420px,76vw); margin-top:26px;
+  opacity:0; animation:fadeIn 0.6s 1.5s forwards;
+}
+.ld-prog-labels { display:flex; justify-content:space-between; margin-bottom:8px; }
+.ld-prog-lbl { font-family:var(--font-m); font-size:9px; color:var(--dim); letter-spacing:0.16em; text-transform:uppercase; }
+#ld-pct { font-family:var(--font-m); font-size:9px; color:var(--accent); letter-spacing:0.12em; }
+.ld-track {
+  width:100%; height:2px;
+  background:rgba(255,255,255,0.05); border-radius:2px;
+  overflow:hidden; position:relative;
+}
+.ld-track::before {
+  content:''; position:absolute; inset:0;
+  background:repeating-linear-gradient(90deg,transparent 0,transparent 19px,rgba(255,255,255,0.04) 19px,rgba(255,255,255,0.04) 20px);
+}
+#ld-fill {
+  height:100%; width:0%;
+  background:linear-gradient(90deg,#1a5070,var(--accent));
+  border-radius:2px; position:relative;
+}
+#ld-fill::after {
+  content:''; position:absolute; right:-2px; top:-4px;
+  width:7px; height:9px; background:var(--accent);
+  border-radius:50%; filter:blur(4px);
+  box-shadow:0 0 10px var(--accent),0 0 22px rgba(79,195,247,0.5);
+}
+.ld-ms-row { display:flex; justify-content:space-between; margin-top:7px; }
+.ld-ms {
+  font-family:var(--font-m); font-size:8px;
+  color:rgba(74,85,104,0.4); letter-spacing:0.1em;
+  text-transform:uppercase; transition:color 0.5s;
+}
+.ld-ms.lit { color:var(--accent); }
+
+/* ══════════════════════════════
+   VOID EXPERIENCE
+══════════════════════════════ */
+#void {
+  position:fixed; inset:0; z-index:5;
+  opacity:0; pointer-events:none;
+  transition:opacity 1.4s ease;
+}
+#void.on { opacity:1; pointer-events:all; }
+
+/* NAV */
+#nav {
+  position:absolute; top:0; left:0; right:0; z-index:10;
+  padding:18px 36px;
+  display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(to bottom,rgba(2,4,10,0.88),transparent);
+}
+.nav-logo { font-family:var(--font-d); font-size:20px; letter-spacing:0.1em; color:var(--white); }
+.nav-logo span { color:var(--flame); }
+.nav-right { font-family:var(--font-m); font-size:9px; color:var(--dim); letter-spacing:0.16em; text-align:right; line-height:1.9; }
+.nav-right .lit { color:var(--accent); }
+#nav-bar { position:absolute; bottom:0; left:0; right:0; height:1px; background:rgba(255,255,255,0.05); }
+#nav-bar-fill { height:100%; width:0%; background:linear-gradient(90deg,var(--rust),var(--flame)); transition:width 0.4s; }
+
+/* scroll ticker */
+#ticker-wrap {
+  position:absolute; top:68px; left:0; right:0; z-index:10;
+  overflow:hidden; height:20px; pointer-events:none;
+  opacity:0; transition:opacity 1s;
+}
+#ticker-wrap.on { opacity:1; }
+#ticker {
+  display:inline-block; white-space:nowrap;
+  font-family:var(--font-m); font-size:10px;
+  color:rgba(79,195,247,0.45); letter-spacing:0.22em;
+  animation:tickerMove 22s linear infinite;
+}
+@keyframes tickerMove { from{transform:translateX(100vw)} to{transform:translateX(-100%)} }
+
+/* SECTIONS */
+.vs {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.9s ease; z-index:6;
+}
+.vs.on { opacity:1; pointer-events:all; }
+
+/* vs0 — transmission */
+#vs0 { padding:0 clamp(18px,7vw,150px); max-width:860px; margin:0 auto; left:50%; transform:translateX(-50%); width:100%; }
+.tx-box {
+  background:rgba(4,6,14,0.78);
+  border:1px solid rgba(79,195,247,0.11);
+  border-left:2px solid var(--accent);
+  padding:24px 28px; backdrop-filter:blur(10px);
+}
+.tx-hdr {
+  font-family:var(--font-m); font-size:10px;
+  color:var(--accent); letter-spacing:0.22em;
+  margin-bottom:14px; display:flex; gap:16px; flex-wrap:wrap;
+}
+.tx-hdr .sep { color:var(--dim); }
+.tx-line {
+  font-family:var(--font-m);
+  font-size:clamp(11px,1.55vw,13px);
+  color:var(--white); letter-spacing:0.06em;
+  line-height:2.1; opacity:0; transition:opacity 0.4s;
+}
+.tx-line.dm { color:var(--muted); }
+.tx-line.am { color:var(--ember); }
+.tx-line.sp { height:10px; opacity:1 !important; }
+.blink-cur {
+  display:inline-block; width:7px; height:13px;
+  background:var(--accent); vertical-align:middle;
+  animation:blink 0.9s infinite; margin-left:3px;
+}
+
+/* vs1 — stats */
+#vs1 { gap:18px; padding:0 16px; }
+.vs1-tag {
+  font-family:var(--font-m); font-size:clamp(9px,1.1vw,11px);
+  color:var(--dim); letter-spacing:0.26em; text-transform:uppercase;
+}
+.stats-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:10px; width:min(800px,90vw);
+}
+.sc {
+  background:rgba(4,6,14,0.72);
+  border:1px solid rgba(255,255,255,0.06);
+  padding:16px 18px; border-radius:3px;
+  cursor:none; transition:border-color 0.3s,background 0.3s,transform 0.25s;
+  position:relative; overflow:hidden;
+}
+.sc::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  opacity:0; transition:opacity 0.4s;
+}
+.sc:hover { border-color:rgba(79,195,247,0.28); background:rgba(79,195,247,0.04); transform:translateY(-3px); }
+.sc:hover::before { opacity:1; }
+.sc-num { font-family:var(--font-d); font-size:clamp(26px,4vw,40px); color:var(--accent); letter-spacing:0.05em; line-height:1; }
+.sc-unit { font-family:var(--font-m); font-size:8px; color:var(--dim); letter-spacing:0.18em; margin-top:3px; }
+.sc-lbl { font-family:var(--font-b); font-size:13px; color:var(--white); margin-top:7px; font-weight:500; letter-spacing:0.04em; }
+.sc-tip {
+  font-family:var(--font-m); font-size:9px;
+  color:rgba(79,195,247,0.42); letter-spacing:0.1em;
+  margin-top:4px; line-height:1.5;
+  opacity:0; max-height:0; overflow:hidden;
+  transition:opacity 0.3s,max-height 0.35s;
+}
+.sc:hover .sc-tip { opacity:1; max-height:44px; }
+.sc.red { border-color:rgba(255,68,68,0.12); }
+.sc.red .sc-num { color:#ff6666; }
+.sc.red::before { background:linear-gradient(90deg,transparent,#ff4444,transparent); }
+.sc.red .sc-tip { color:rgba(255,100,100,0.5); }
+
+/* vs2 — ambient */
+#vs2 { padding:0 clamp(20px,10vw,180px); }
+.amb-block { max-width:540px; text-align:center; }
+.al {
+  font-family:var(--font-b);
+  font-size:clamp(14px,2.1vw,21px);
+  color:rgba(237,232,224,0.10); font-weight:300;
+  line-height:1.95; letter-spacing:0.05em;
+  transition:color 0.9s,opacity 0.7s;
+}
+.al.on { color:rgba(237,232,224,0.62); }
+.al.ac { color:var(--accent); opacity:0.72; }
+.al.mt { margin-top:22px; }
+.al.sm { font-size:0.84em; opacity:0.5; }
+
+/* vs3 — final */
+#vs3 { gap:26px; padding:0 20px; }
+.final-tx {
+  font-family:var(--font-m);
+  font-size:clamp(10px,1.45vw,13px);
+  color:var(--muted); letter-spacing:0.1em;
+  line-height:2.2; text-align:center; max-width:460px;
+}
+.final-tx .hs { color:var(--flame); }
+.final-tx .al2 { color:var(--ember); }
+.proceed-btn {
+  font-family:var(--font-d); font-size:20px;
+  letter-spacing:0.18em; color:var(--black);
+  background:linear-gradient(135deg,var(--flame),var(--rust));
+  border:none; padding:14px 44px; border-radius:2px;
+  cursor:none; transition:transform 0.2s,box-shadow 0.2s;
+  position:relative; overflow:hidden;
+}
+.proceed-btn::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(255,255,255,0.12),transparent); }
+.proceed-btn:hover { transform:scale(1.04); box-shadow:0 0 34px rgba(232,148,58,0.38); }
+
+/* DR CHEN LOG */
+#chen {
+  position:absolute; bottom:28px; left:28px;
+  font-family:var(--font-m); font-size:9px;
+  color:rgba(200,190,170,0); letter-spacing:0.1em;
+  line-height:1.9; max-width:250px; z-index:20;
+  pointer-events:none; transition:color 2s;
+}
+#chen.ghost { color:rgba(200,190,170,0.18); }
+#chen.gone  { color:rgba(200,190,170,0); }
+
+/* SCROLL HINT */
+#sh {
+  position:absolute; bottom:28px; left:50%;
+  transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  z-index:20; opacity:0; transition:opacity 0.5s;
+}
+#sh.on { opacity:1; }
+.sh-lbl { font-family:var(--font-m); font-size:9px; color:var(--dim); letter-spacing:0.22em; }
+.sh-arr { width:1px; height:28px; background:linear-gradient(to bottom,var(--dim),transparent); animation:drop 1.8s ease-in-out infinite; }
+@keyframes drop { 0%{transform:translateY(-6px);opacity:0}40%{opacity:1}100%{transform:translateY(6px);opacity:0} }
+
+/* TRANS OUT */
+#to { position:fixed; inset:0; z-index:80; background:var(--black); opacity:0; pointer-events:none; transition:opacity 1.6s; }
+#to.on { opacity:1; pointer-events:all; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn { from{opacity:0}to{opacity:1} }
+@keyframes blink  { 0%,100%{opacity:1}50%{opacity:0} }
+
+@media(max-width:520px){
+  #vs0{padding:0 14px;} .tx-box{padding:14px 16px;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  #nav{padding:12px 16px;} .nav-right{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div id="cur-dot"></div><div id="cur-ring"></div>
+<div id="cur-h"></div><div id="cur-v"></div>
+
+<!-- Canvases -->
+<canvas id="star-canvas"></canvas>
+<canvas id="ship-canvas"></canvas>
+<div id="vignette"></div>
+
+<!-- ══ LOADING SCREEN ══ -->
+<div id="loader">
+  <div class="ld-brk ld-brk-tl"></div><div class="ld-brk ld-brk-tr"></div>
+  <div class="ld-brk ld-brk-bl"></div><div class="ld-brk ld-brk-br"></div>
+  <div class="ld-corner cl-tl">ARES VII · IN TRANSIT<br>MISSION ELAPSED: 47 DAYS</div>
+  <div class="ld-corner cl-tr">CREW: 6 OF 6<br>HULL: NOMINAL</div>
+  <div class="ld-corner cl-bl">DIST FROM EARTH: 38,000,000 KM<br>DIST TO MARS: 187,000,000 KM</div>
+  <div class="ld-corner cl-br">SIGNAL DELAY: 3 MIN 12 SEC<br>AND GROWING</div>
+
+  <div class="ld-day">Day 47 · Mission Ares VII · Deep Space Transit</div>
+  <div class="ld-title">
+    <span class="sub">Mission Log —</span>
+    THE
+    <span class="accent">VOID</span>
+  </div>
+  <p class="ld-tagline">225 million kilometres of silence.<br><em>You are further from Earth than any human has ever been.</em></p>
+  <div class="ld-div"></div>
+  <div class="ld-terminal" id="ld-term"><span id="ld-typed"></span><span id="ld-cursor-blink">█</span></div>
+  <div class="ld-prog-wrap">
+    <div class="ld-prog-labels">
+      <span class="ld-prog-lbl">Transit Progress</span>
+      <span id="ld-pct">0%</span>
+    </div>
+    <div class="ld-track"><div id="ld-fill"></div></div>
+    <div class="ld-ms-row">
+      <span class="ld-ms" id="ldm0">Launch</span>
+      <span class="ld-ms" id="ldm1">Day 47</span>
+      <span class="ld-ms" id="ldm2">Day 94</span>
+      <span class="ld-ms" id="ldm3">Approach</span>
+      <span class="ld-ms" id="ldm4">Mars</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VOID ══ -->
+<div id="void">
+  <nav id="nav">
+    <div class="nav-logo">ARES <span>VII</span></div>
+    <div class="nav-right">SIGNAL DELAY: <span class="lit">3 MIN 12 SEC</span><br>DAY 47 · DEEP SPACE TRANSIT</div>
+    <div id="nav-bar"><div id="nav-bar-fill"></div></div>
+  </nav>
+  <div id="ticker-wrap"><div id="ticker">▶&nbsp;&nbsp;SIGNAL DELAY: 3 MIN 12 SEC · GROWING AT 1.2 SEC/DAY · DISTANCE FROM EARTH: 38,000,000 KM · CREW: 6 OF 6 · HULL INTEGRITY: 99.7% · TELEMETRY GAP: 11 SEC — CAUSE UNKNOWN&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▶&nbsp;&nbsp;SIGNAL DELAY: 3 MIN 12 SEC · GROWING AT 1.2 SEC/DAY · DISTANCE FROM EARTH: 38,000,000 KM · CREW: 6 OF 6 · HULL INTEGRITY: 99.7% · TELEMETRY GAP: 11 SEC — CAUSE UNKNOWN</div></div>
+
+  <!-- SECTION 0: Houston Transmission -->
+  <div class="vs on" id="vs0">
+    <div id="vs0-inner" style="padding:0 clamp(18px,7vw,150px);max-width:860px;width:100%">
+      <div class="tx-box">
+        <div class="tx-hdr">
+          <span>HOUSTON TRANSMISSION</span><span class="sep">·</span>
+          <span>DAY 47</span><span class="sep">·</span><span>DELAY: 3 MIN 12 SEC</span>
+        </div>
+        <div class="tx-line dm" id="tl0">HOUSTON: "Ares Seven. This is Houston.</div>
+        <div class="tx-line sp"></div>
+        <div class="tx-line"    id="tl1">Mission Day 47.</div>
+        <div class="tx-line sp"></div>
+        <div class="tx-line dm" id="tl2">You are 38 million kilometres from Earth.</div>
+        <div class="tx-line am" id="tl3">Signal delay is now 3 minutes, 12 seconds.</div>
+        <div class="tx-line sp"></div>
+        <div class="tx-line dm" id="tl4">Every word I send you</div>
+        <div class="tx-line dm" id="tl5">is already three minutes old</div>
+        <div class="tx-line"    id="tl6">when it arrives.</div>
+        <div class="tx-line sp"></div>
+        <div class="tx-line"    id="tl7">...We had a scare yesterday.</div>
+        <div class="tx-line am" id="tl8">Lost your telemetry for 11 seconds.</div>
+        <div class="tx-line sp"></div>
+        <div class="tx-line dm" id="tl9">11 seconds.</div>
+        <div class="tx-line sp"></div>
+        <div class="tx-line dm" id="tl10">We don't know what caused it.</div>
+        <div class="tx-line dm" id="tl11">The engineers have six theories.</div>
+        <div class="tx-line sp"></div>
+        <div class="tx-line"    id="tl12">We're not going to share them with you yet.</div>
+        <div class="tx-line sp"></div>
+        <div class="tx-line dm" id="tl13">It's probably nothing.</div>
+        <div class="tx-line am" id="tl14">It's almost certainly nothing."</div>
+        <div class="tx-line"    id="tl15" style="margin-top:8px"><span class="blink-cur"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: Stats Cards -->
+  <div class="vs" id="vs1">
+    <div class="vs1-tag">MISSION TELEMETRY — DAY 47 — HOVER TO REVEAL</div>
+    <div class="stats-grid">
+      <div class="sc"><div class="sc-num">38M</div><div class="sc-unit">KILOMETRES</div><div class="sc-lbl">Distance from Earth</div><div class="sc-tip">Growing 450,000 km/day</div></div>
+      <div class="sc"><div class="sc-num">186</div><div class="sc-unit">DAYS LEFT</div><div class="sc-lbl">Until Mars Arrival</div><div class="sc-tip">Assumes no corrections</div></div>
+      <div class="sc"><div class="sc-num">3:12</div><div class="sc-unit">MIN · SEC</div><div class="sc-lbl">Signal Delay</div><div class="sc-tip">Growing 1.2 sec/day. At Mars: 11 min 14 sec</div></div>
+      <div class="sc"><div class="sc-num">6/6</div><div class="sc-unit">ACTIVE</div><div class="sc-lbl">Crew Status</div><div class="sc-tip">Last confirmed: 3 hrs ago</div></div>
+      <div class="sc red"><div class="sc-num">11</div><div class="sc-unit">SECONDS</div><div class="sc-lbl">Signal Loss — Unknown</div><div class="sc-tip">Cause: 6 theories. None confirmed.</div></div>
+      <div class="sc"><div class="sc-num">−63°</div><div class="sc-unit">CELSIUS AVG</div><div class="sc-lbl">Mars Temperature</div><div class="sc-tip">Range: −125°C to +20°C</div></div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: Ambient Drifting Text -->
+  <div class="vs" id="vs2">
+    <div class="amb-block">
+      <div class="al" id="al0">In the void between worlds,</div>
+      <div class="al" id="al1">there is no up.</div>
+      <div class="al" id="al2">No down.</div>
+      <div class="al" id="al3">No rescue.</div>
+      <div class="al mt" id="al4">The nearest human being</div>
+      <div class="al ac" id="al5">is 38 million kilometres away.</div>
+      <div class="al mt" id="al6">They are talking to you right now.</div>
+      <div class="al" id="al7">Their words left 3 minutes ago.</div>
+      <div class="al mt" id="al8">If something goes wrong —</div>
+      <div class="al" id="al9">by the time Houston hears it —</div>
+      <div class="al" id="al10">by the time they respond —</div>
+      <div class="al" id="al11">six minutes will have passed.</div>
+      <div class="al mt sm" id="al12">Six minutes is a long time to be alone with a problem.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: Final Transmission -->
+  <div class="vs" id="vs3">
+    <div class="final-tx">
+      <span class="hs">HOUSTON:</span> "Ares Seven — heads up.<br><br>
+      Deep Space Network is tracking<br>
+      something ahead of your trajectory.<br><br>
+      <span class="al2">Classifying now.</span><br><br>
+      Stand by."
+    </div>
+    <button class="proceed-btn" id="proc-btn">STAND BY → PROCEED</button>
+  </div>
+
+  <!-- Dr. Chen ghost log -->
+  <div id="chen">
+    [CREW LOG — DR. CHEN — DAY 43]<br>
+    "I keep hearing something.<br>
+    In the hull.<br>
+    Martinez says it's thermal expansion.<br>
+    He's probably right.<br>
+    He's probably right."
+  </div>
+
+  <!-- Scroll hint -->
+  <div id="sh"><div class="sh-lbl">Scroll to continue</div><div class="sh-arr"></div></div>
+</div>
+
+<!-- Transition out -->
+<div id="to"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script>
+/* ── CURSOR ── */
+const cd=document.getElementById('cur-dot'),cr=document.getElementById('cur-ring'),
+      ch=document.getElementById('cur-h'),cv=document.getElementById('cur-v');
+let mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function cl(){
+  const s=`left:${mx}px;top:${my}px;`;
+  cd.style.cssText+=s;ch.style.cssText+=s;cv.style.cssText+=s;
+  rx+=(mx-rx)*0.11;ry+=(my-ry)*0.11;
+  cr.style.cssText+=`left:${rx}px;top:${ry}px;`;
+  requestAnimationFrame(cl);
+})();
+
+/* ── STAR FIELD — 3 parallax layers, occasional star blinks out ── */
+const sc=document.getElementById('star-canvas'),sctx=sc.getContext('2d');
+let SW,SH,starData=[];
+const layerDefs=[
+  {count:200,rMin:0.2,rMax:0.65,spd:0.04,baseAlpha:0.30,blinkChance:0.035},
+  {count:120,rMin:0.5,rMax:1.05,spd:0.09,baseAlpha:0.52,blinkChance:0.020},
+  {count: 55,rMin:0.9,rMax:1.55,spd:0.16,baseAlpha:0.72,blinkChance:0.008},
+];
+function buildStars(){
+  SW=sc.width=innerWidth;SH=sc.height=innerHeight;
+  starData=layerDefs.map(l=>{
+    const arr=[];
+    for(let i=0;i<l.count;i++){
+      arr.push({
+        x:Math.random()*SW,y:Math.random()*SH,
+        r:l.rMin+Math.random()*(l.rMax-l.rMin),
+        a:l.baseAlpha*(0.5+Math.random()*0.5),
+        tp:Math.random()*Math.PI*2,
+        ts:0.003+Math.random()*0.011,
+        blinkable:Math.random()<l.blinkChance,
+        blinking:false,blinkTimer:5000+Math.random()*12000,
+      });
+    }
+    return{l,arr};
+  });
+}
+buildStars(); addEventListener('resize',buildStars);
+let mpx=0,mpy=0,stT=0,voidOn=false;
+addEventListener('mousemove',e=>{mpx=(e.clientX/innerWidth-0.5);mpy=(e.clientY/innerHeight-0.5);});
+(function drawStars(){
+  requestAnimationFrame(drawStars);
+  stT+=0.016;
+  sctx.clearRect(0,0,SW,SH);
+  starData.forEach(({l,arr})=>{
+    arr.forEach(s=>{
+      s.tp+=s.ts;
+      let a=s.a+Math.sin(s.tp)*s.a*0.35;
+      if(s.blinkable){
+        s.blinkTimer-=16;
+        if(s.blinkTimer<=0){
+          s.blinking=!s.blinking;
+          s.blinkTimer=s.blinking?600+Math.random()*500:5000+Math.random()*10000;
+        }
+        if(s.blinking)a*=0.04;
+      }
+      const px=(s.x+mpx*l.spd*80+SW)%SW;
+      const py=(s.y+mpy*l.spd*50+SH)%SH;
+      sctx.beginPath();sctx.arc(px,py,s.r,0,Math.PI*2);
+      sctx.fillStyle=`rgba(210,204,194,${Math.max(0,Math.min(1,a))})`;
+      sctx.fill();
+    });
+  });
+})();
+
+/* ── SHIP ── */
+const shc=document.getElementById('ship-canvas'),shctx=shc.getContext('2d');
+let shW,shH;
+function rsShip(){shW=shc.width=innerWidth;shH=shc.height=innerHeight;}
+rsShip();addEventListener('resize',rsShip);
+(function drawShip(){
+  requestAnimationFrame(drawShip);
+  shctx.clearRect(0,0,shW,shH);
+  if(!voidOn)return;
+  const cx=shW/2+Math.sin(stT*0.28)*55;
+  const cy=shH/2+Math.cos(stT*0.19)*28;
+  const angle=Math.sin(stT*0.12)*0.06+0.05;
+  shctx.save();
+  shctx.translate(cx,cy);shctx.rotate(angle);shctx.scale(0.68,0.68);
+  /* engine glow */
+  const g=shctx.createRadialGradient(0,28,0,0,28,32);
+  g.addColorStop(0,'rgba(245,166,35,0.30)');g.addColorStop(0.5,'rgba(196,83,26,0.1)');g.addColorStop(1,'rgba(0,0,0,0)');
+  shctx.fillStyle=g;shctx.fillRect(-32,12,64,48);
+  /* flicker */
+  const fk=0.78+Math.sin(stT*22)*0.22;
+  shctx.fillStyle=`rgba(255,224,90,${0.38*fk})`;
+  shctx.beginPath();shctx.ellipse(0,30,4,8*fk,0,0,Math.PI*2);shctx.fill();
+  /* body */
+  shctx.fillStyle='rgba(176,172,165,0.52)';
+  shctx.beginPath();shctx.moveTo(0,-34);shctx.lineTo(13,22);shctx.lineTo(-13,22);shctx.closePath();shctx.fill();
+  /* window */
+  shctx.fillStyle='rgba(79,195,247,0.22)';
+  shctx.beginPath();shctx.arc(0,-2,5,0,Math.PI*2);shctx.fill();
+  shctx.restore();
+})();
+
+/* ── LOADER ── */
+const bootLines=[
+  '> ARES VII · TRANSIT LOG · DAY 47',
+  '> DEEP SPACE NETWORK: CONNECTED',
+  '> SIGNAL DELAY: 3 MIN 12 SEC',
+  '> CREW STATUS: 6 OF 6 · NOMINAL',
+  '> HULL INTEGRITY: 99.7%',
+  '> TELEMETRY GAP: 11 SEC · UNRESOLVED',
+  '> LOADING MISSION DATA...',
+];
+let bIdx=0,bCh=0;
+const ldTyped=document.getElementById('ld-typed');
+function typeBoot(){
+  if(bIdx>=bootLines.length)return;
+  const ln=bootLines[bIdx];
+  if(bCh<ln.length){
+    ldTyped.textContent+=ln[bCh++];
+    setTimeout(typeBoot,26+Math.random()*16);
+  } else {
+    ldTyped.textContent+='\n';bIdx++;bCh=0;
+    setTimeout(typeBoot,110+Math.random()*80);
+  }
+}
+setTimeout(typeBoot,1600);
+
+const ldFill=document.getElementById('ld-fill'),ldPctEl=document.getElementById('ld-pct');
+const ldMs=[0,1,2,3,4].map(i=>document.getElementById('ldm'+i));
+const msT=[0,20,44,68,90];
+const prog={v:0};
+gsap.timeline({delay:1.8})
+  .to(prog,{v:22,duration:3.5,ease:'power1.inOut',onUpdate:tickLd})
+  .to(prog,{v:22,duration:1.2})
+  .to(prog,{v:50,duration:4.0,ease:'power1.inOut',onUpdate:tickLd})
+  .to(prog,{v:50,duration:1.0})
+  .to(prog,{v:78,duration:3.2,ease:'power1.out', onUpdate:tickLd})
+  .to(prog,{v:78,duration:0.9})
+  .to(prog,{v:100,duration:2.0,ease:'power2.in', onUpdate:tickLd,onComplete:endLoader});
+function tickLd(){
+  const v=prog.v;
+  ldFill.style.width=v+'%';
+  ldPctEl.textContent=Math.floor(v)+'%';
+  msT.forEach((t,i)=>{if(v>=t+2)ldMs[i].classList.add('lit');});
+}
+function endLoader(){
+  setTimeout(()=>{
+    document.getElementById('loader').classList.add('out');
+    setTimeout(startVoid,1400);
+  },600);
+}
+
+/* ── VOID ── */
+let curSec=0,trans=false,lastSc=0;
+const secs=['vs0','vs1','vs2','vs3'].map(id=>document.getElementById(id));
+
+function startVoid(){
+  voidOn=true;
+  document.getElementById('void').classList.add('on');
+  document.getElementById('ticker-wrap').classList.add('on');
+  typeTransmission();
+  setTimeout(()=>document.getElementById('sh').classList.add('on'),6500);
+  setTimeout(showChen,16000+Math.random()*8000);
+}
+
+/* type transmission lines */
+const txIds=[...Array(16).keys()].map(i=>'tl'+i);
+function typeTransmission(){
+  txIds.forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el) gsap.to(el,{opacity:1,duration:0.4,delay:0.3+i*0.36});
+  });
+}
+function resetTx(){
+  txIds.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){gsap.killTweensOf(el);gsap.set(el,{opacity:0});}
+  });
+}
+
+function showSec(idx){
+  if(trans||idx===curSec||idx<0||idx>=secs.length)return;
+  trans=true;
+  document.getElementById('sh').classList.remove('on');
+  const prev=secs[curSec],next=secs[idx];
+  gsap.to(prev,{opacity:0,duration:0.7,ease:'power2.in',onComplete:()=>{
+    prev.classList.remove('on');
+    next.classList.add('on');
+    gsap.to(next,{opacity:1,duration:0.9,ease:'power2.out'});
+    curSec=idx;trans=false;
+    onEnter(idx);
+  }});
+}
+
+function onEnter(idx){
+  /* nav progress */
+  document.getElementById('nav-bar-fill').style.width=(idx/3*100)+'%';
+
+  if(idx===0){
+    resetTx(); typeTransmission();
+    setTimeout(()=>document.getElementById('sh').classList.add('on'),5800);
+  }
+  if(idx===1){
+    document.querySelectorAll('.sc').forEach((c,i)=>{
+      gsap.from(c,{opacity:0,y:16,duration:0.55,delay:i*0.09,ease:'power2.out'});
+    });
+    setTimeout(()=>document.getElementById('sh').classList.add('on'),2200);
+  }
+  if(idx===2){
+    /* stagger ambient lines lighting up */
+    const als=document.querySelectorAll('.al');
+    als.forEach(el=>{el.classList.remove('on','ac');});
+    als.forEach((el,i)=>setTimeout(()=>{
+      if(el.id==='al5'||el.id==='al12')el.classList.add('ac');
+      else el.classList.add('on');
+    },350+i*300));
+    /* trigger chen log during ambient section */
+    setTimeout(showChen,3500);
+    setTimeout(()=>document.getElementById('sh').classList.add('on'),6200);
+  }
+  if(idx===3){
+    gsap.from('.final-tx',{opacity:0,y:18,duration:0.9,ease:'power2.out'});
+    gsap.from('.proceed-btn',{opacity:0,y:12,duration:0.7,delay:0.55,ease:'power2.out'});
+  }
+}
+
+/* Dr. Chen ghost log */
+let chenShown=false;
+function showChen(){
+  if(chenShown)return;chenShown=true;
+  const el=document.getElementById('chen');
+  el.classList.add('ghost');
+  setTimeout(()=>el.classList.add('gone'),4000);
+  setTimeout(()=>{el.classList.remove('ghost','gone');chenShown=false;},6500);
+}
+
+/* scroll / key / touch */
+addEventListener('wheel',e=>{
+  const n=Date.now();if(n-lastSc<950||!voidOn)return;lastSc=n;
+  e.deltaY>0?showSec(curSec+1):showSec(curSec-1);
+},{passive:true});
+let ty=0;
+addEventListener('touchstart',e=>{ty=e.touches[0].clientY;},{passive:true});
+addEventListener('touchend',e=>{
+  const dy=ty-e.changedTouches[0].clientY;
+  if(Math.abs(dy)<40)return;
+  const n=Date.now();if(n-lastSc<950||!voidOn)return;lastSc=n;
+  dy>0?showSec(curSec+1):showSec(curSec-1);
+},{passive:true});
+addEventListener('keydown',e=>{
+  if(!voidOn||trans)return;
+  const n=Date.now();if(n-lastSc<950)return;
+  if(e.key==='ArrowDown'||e.key==='PageDown'){lastSc=n;showSec(curSec+1);}
+  if(e.key==='ArrowUp'  ||e.key==='PageUp')  {lastSc=n;showSec(curSec-1);}
+});
+
+/* proceed */
+document.getElementById('proc-btn').addEventListener('click',()=>{
+  showChen();
+  setTimeout(()=>{
+    document.getElementById('to').classList.add('on');
+    setTimeout(()=>{window.location.href='section3.html';},1600);
+  },1000);
+});
+</script>
+</body>
+</html>
