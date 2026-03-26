@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journey to Mars — Chapter 8: The Long Way Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --black:#02040A;--rust:#7A2208;--mars:#B84016;--flame:#E8943A;
+  --ember:#F5A623;--white:#EDE8E0;--muted:#4A5568;--dim:#2D3748;
+  --accent:#4FC3F7;--green:#39FF89;--red:#FF4444;--marsatmo:#d4612a;
+  --font-d:"Bebas Neue",sans-serif;--font-b:"Rajdhani",sans-serif;--font-m:"Share Tech Mono",monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#0c0400;cursor:none;user-select:none;}
+
+/* ── CURSOR ── */
+#cur-dot{position:fixed;z-index:9999;width:8px;height:8px;background:var(--ember);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);mix-blend-mode:screen;}
+#cur-ring{position:fixed;z-index:9998;width:32px;height:32px;border:1px solid rgba(232,148,58,0.4);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);}
+#cur-ring.danger{border-color:rgba(255,68,68,0.7);width:40px;height:40px;}
+
+/* ── GRAIN ── */
+body::after{content:"";position:fixed;inset:0;z-index:96;pointer-events:none;opacity:0.16;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");}
+
+/* ── SCANLINES ── */
+#scanlines{position:fixed;inset:0;z-index:95;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,transparent,transparent 2px,rgba(0,0,0,0.055) 2px,rgba(0,0,0,0.055) 4px);}
+
+canvas{position:fixed;inset:0;z-index:0;display:block;}
+
+/* ── PROGRESS BAR ── */
+#pb-wrap{position:fixed;top:0;left:0;right:0;height:3px;z-index:40;background:rgba(255,255,255,0.04);}
+#pb-fill{height:100%;background:linear-gradient(to right,var(--rust),var(--flame),var(--ember));transition:width 0.6s ease;}
+
+/* ── HUD ── */
+#hud{position:fixed;top:0;left:0;right:0;z-index:30;padding:16px 28px 32px;
+  background:linear-gradient(to bottom,rgba(12,4,0,0.97),transparent);
+  display:flex;justify-content:space-between;pointer-events:none;}
+.hc{display:flex;flex-direction:column;gap:4px;}
+.hi{font-family:var(--font-m);font-size:clamp(9px,1.1vw,11px);color:rgba(170,120,80,0.72);letter-spacing:0.14em;}
+.hi span{color:var(--ember);}
+.hi .gr{color:var(--green);}
+.hi .rd{color:var(--red);animation:blink 0.7s infinite;}
+.hi .yl{color:var(--ember);animation:blink 1.3s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+
+/* ── DAY ── */
+#day-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:31;text-align:center;pointer-events:none;}
+.dl{font-family:var(--font-m);font-size:9px;color:rgba(170,100,60,0.7);letter-spacing:0.28em;display:block;margin-bottom:2px;}
+#day-num{font-family:var(--font-d);font-size:clamp(28px,3.5vw,48px);letter-spacing:0.06em;color:var(--white);line-height:1;}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 1.2s;}
+.screen.active{opacity:1;pointer-events:all;}
+
+/* ── CARDS ── */
+.card{background:rgba(12,4,0,0.9);border:1px solid rgba(232,148,58,0.16);border-left:2px solid var(--flame);max-width:580px;width:90vw;padding:26px 30px;}
+.card.danger-card{border-color:rgba(255,68,68,0.3);border-left-color:var(--red);}
+.card-tag{font-family:var(--font-m);font-size:9px;color:var(--flame);letter-spacing:0.28em;margin-bottom:10px;}
+.card-tag.danger-tag{color:var(--red);}
+.card-title{font-family:var(--font-d);font-size:clamp(32px,5vw,70px);letter-spacing:0.07em;color:var(--white);line-height:0.9;margin-bottom:14px;}
+.card-title .rd{color:var(--red);}
+.card-body{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:rgba(237,232,224,0.65);letter-spacing:0.06em;line-height:2;}
+.card-body .hl{color:var(--flame);}
+.card-body .gr{color:var(--green);}
+.card-body .rd{color:var(--red);}
+.card-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px;}
+.cs{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);padding:10px 12px;text-align:center;}
+.cs-n{font-family:var(--font-d);font-size:22px;color:var(--flame);letter-spacing:0.04em;line-height:1;}
+.cs-n.rd{color:var(--red);}
+.cs-n.gr{color:var(--green);}
+.cs-l{font-family:var(--font-m);font-size:7px;color:var(--muted);letter-spacing:0.16em;margin-top:3px;}
+.card-btns{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;}
+
+/* ── BUTTONS ── */
+.btn-primary{font-family:var(--font-d);font-size:18px;letter-spacing:0.16em;color:var(--black);
+  background:linear-gradient(135deg,var(--flame),var(--mars));border:none;padding:13px 36px;border-radius:2px;cursor:none;transition:transform 0.2s,box-shadow 0.2s;}
+.btn-primary:hover{transform:scale(1.04);box-shadow:0 0 36px rgba(232,148,58,0.45);}
+.btn-danger{font-family:var(--font-d);font-size:18px;letter-spacing:0.16em;color:var(--white);
+  background:linear-gradient(135deg,#cc2222,#991111);border:none;padding:13px 36px;border-radius:2px;cursor:none;transition:transform 0.2s,box-shadow 0.2s;}
+.btn-danger:hover{transform:scale(1.04);box-shadow:0 0 36px rgba(255,68,68,0.5);}
+.btn-green{font-family:var(--font-d);font-size:18px;letter-spacing:0.16em;color:var(--black);
+  background:linear-gradient(135deg,var(--green),#0ea86b);border:none;padding:13px 36px;border-radius:2px;cursor:none;transition:transform 0.2s,box-shadow 0.2s;}
+.btn-green:hover{transform:scale(1.04);box-shadow:0 0 36px rgba(57,255,137,0.4);}
+.btn-sec{font-family:var(--font-m);font-size:11px;letter-spacing:0.14em;color:var(--muted);
+  background:transparent;border:1px solid rgba(255,255,255,0.1);padding:13px 24px;border-radius:2px;cursor:none;transition:color 0.2s,border-color 0.2s;}
+.btn-sec:hover{color:var(--white);border-color:rgba(255,255,255,0.3);}
+.btn-disabled{opacity:0.35;pointer-events:none;}
+
+/* ── EVA REPAIR PANEL ── */
+#repair-panel{position:fixed;inset:0;z-index:25;pointer-events:none;opacity:0;transition:opacity 1s;}
+#repair-panel.show{opacity:1;pointer-events:all;}
+
+/* Engine diagram */
+#engine-diagram{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:clamp(300px,55vw,600px);height:clamp(220px,42vh,440px);
+  background:rgba(8,2,0,0.92);border:1px solid rgba(255,68,68,0.22);pointer-events:all;}
+.eng-title{font-family:var(--font-m);font-size:9px;color:var(--red);letter-spacing:0.28em;padding:12px 16px 8px;}
+#eng-canvas{display:block;width:100%;flex:1;}
+
+/* Repair tasks floating labels */
+.repair-task{position:absolute;cursor:none;z-index:60;}
+.rt-pip{width:18px;height:18px;border-radius:50%;border:2px solid var(--red);background:rgba(255,68,68,0.12);
+  position:relative;animation:rtPulse 1.4s infinite;}
+.rt-pip::before{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(255,68,68,0.3);animation:rtPulse 1.4s 0.4s infinite;}
+.repair-task:hover .rt-pip{background:rgba(255,68,68,0.35);transform:scale(1.3);}
+.rt-label{font-family:var(--font-m);font-size:9px;color:var(--red);letter-spacing:0.18em;
+  position:absolute;white-space:nowrap;top:-22px;left:50%;transform:translateX(-50%);
+  background:rgba(8,2,0,0.88);padding:3px 8px;border:1px solid rgba(255,68,68,0.22);}
+.repair-task.fixed .rt-pip{border-color:var(--green);background:rgba(57,255,137,0.12);animation:none;}
+.repair-task.fixed .rt-label{color:var(--green);border-color:rgba(57,255,137,0.22);}
+@keyframes rtPulse{0%,100%{opacity:0.8;transform:scale(1)}50%{opacity:0;transform:scale(1.8)}}
+
+/* STORM COUNTDOWN bar */
+#storm-bar-wrap{position:fixed;bottom:62px;left:50%;transform:translateX(-50%);z-index:32;
+  width:clamp(260px,40vw,480px);pointer-events:none;opacity:0;transition:opacity 0.6s;}
+#storm-bar-wrap.show{opacity:1;}
+.sb-label{font-family:var(--font-m);font-size:9px;color:var(--red);letter-spacing:0.24em;
+  display:flex;justify-content:space-between;margin-bottom:5px;}
+#storm-track{height:4px;background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.2);}
+#storm-fill{height:100%;background:linear-gradient(to right,#ff8800,var(--red));transition:width 0.3s linear;}
+
+/* LAUNCH SEQUENCE */
+#launch-seq{position:fixed;inset:0;z-index:70;background:rgba(12,4,0,0);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity 0.8s,background 1s;}
+#launch-seq.show{opacity:1;pointer-events:all;background:rgba(12,4,0,0.6);}
+#countdown-big{font-family:var(--font-d);font-size:clamp(80px,18vw,200px);letter-spacing:0.05em;
+  color:var(--white);text-shadow:0 0 60px rgba(232,148,58,0.5);line-height:1;
+  opacity:0;transition:opacity 0.3s;}
+#countdown-big.show{opacity:1;}
+#liftoff-text{font-family:var(--font-d);font-size:clamp(36px,7vw,88px);letter-spacing:0.12em;
+  color:var(--flame);text-shadow:0 0 80px rgba(232,148,58,0.7);
+  opacity:0;transition:opacity 0.6s;margin-top:10px;}
+#liftoff-text.show{opacity:1;}
+
+/* SPACE EPILOGUE */
+#s-space{background:transparent;}
+.space-card{background:rgba(2,4,10,0.9);border:1px solid rgba(79,195,247,0.14);border-left:2px solid var(--accent);max-width:560px;width:90vw;padding:26px 30px;}
+.space-tag{font-family:var(--font-m);font-size:9px;color:var(--accent);letter-spacing:0.28em;margin-bottom:10px;}
+.space-title{font-family:var(--font-d);font-size:clamp(32px,5vw,68px);letter-spacing:0.07em;color:var(--white);line-height:0.9;margin-bottom:14px;}
+.space-body{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:rgba(237,232,224,0.62);letter-spacing:0.06em;line-height:2;}
+.space-body .hl{color:var(--accent);}
+.space-body .gr{color:var(--green);}
+
+/* PALE BLUE DOT SCREEN */
+#s-bluedot{background:transparent;}
+.bd-center{text-align:center;max-width:500px;width:90vw;}
+.bd-tag{font-family:var(--font-m);font-size:9px;color:var(--accent);letter-spacing:0.3em;margin-bottom:18px;animation:fadeUp 0.7s 0.3s both;}
+.bd-title{font-family:var(--font-d);font-size:clamp(40px,7vw,96px);letter-spacing:0.08em;color:var(--white);
+  line-height:0.88;text-shadow:0 0 80px rgba(79,195,247,0.3);animation:fadeUp 0.8s 0.5s both;}
+.bd-title .bl{color:var(--accent);display:block;}
+.bd-body{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:rgba(237,232,224,0.58);
+  letter-spacing:0.07em;line-height:2.1;margin:22px auto 0;animation:fadeUp 0.8s 0.9s both;}
+.bd-btns{display:flex;gap:14px;margin-top:28px;justify-content:center;flex-wrap:wrap;animation:fadeUp 0.8s 1.3s both;}
+
+/* TX BAR */
+#tx-bar{position:fixed;bottom:0;left:0;right:0;z-index:30;padding:10px 28px 16px;
+  background:linear-gradient(to top,rgba(12,4,0,0.98),transparent);
+  display:flex;align-items:flex-start;gap:10px;pointer-events:none;}
+.tx-icon{font-family:var(--font-m);font-size:9px;color:var(--flame);letter-spacing:0.18em;white-space:nowrap;padding-top:2px;flex-shrink:0;}
+#tx-text{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:var(--white);letter-spacing:0.08em;line-height:1.6;}
+
+/* CHAPTER FLASH */
+#chapter-flash{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:55;
+  pointer-events:none;text-align:center;opacity:0;transition:opacity 0.9s;}
+.cf-big{font-family:var(--font-d);font-size:clamp(38px,6.5vw,88px);letter-spacing:0.09em;color:var(--white);
+  text-shadow:0 0 60px rgba(237,232,224,0.2);line-height:0.9;}
+.cf-sub{font-family:var(--font-m);font-size:clamp(9px,1.2vw,12px);color:var(--muted);letter-spacing:0.26em;margin-top:12px;}
+
+/* REPAIR PROGRESS HUD */
+#repair-hud{position:fixed;top:80px;right:24px;z-index:32;pointer-events:none;opacity:0;transition:opacity 0.6s;}
+#repair-hud.show{opacity:1;}
+.rh-title{font-family:var(--font-m);font-size:8px;color:var(--red);letter-spacing:0.26em;margin-bottom:8px;}
+.rh-item{font-family:var(--font-m);font-size:9px;color:var(--muted);letter-spacing:0.12em;
+  display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.rh-dot{width:7px;height:7px;border-radius:50%;border:1px solid var(--red);flex-shrink:0;}
+.rh-dot.done{background:var(--green);border-color:var(--green);}
+
+/* TRANS */
+#trans-out{position:fixed;inset:0;z-index:80;background:#02040A;opacity:0;pointer-events:none;transition:opacity 1.5s;}
+#trans-out.on{opacity:1;pointer-events:all;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="cur-dot"></div><div id="cur-ring"></div>
+<div id="scanlines"></div>
+<canvas id="c"></canvas>
+
+<div id="pb-wrap"><div id="pb-fill" style="width:20%"></div></div>
+
+<div id="hud">
+  <div class="hc">
+    <div class="hi">ENGINE: <span id="h-eng" class="rd">FAULT</span></div>
+    <div class="hi">CHAMBER TEMP: <span id="h-ctemp">NOMINAL</span></div>
+    <div class="hi">FUEL: <span id="h-fuel">94%</span></div>
+    <div class="hi">STORM ETA: <span id="h-storm" class="yl">T-42:00</span></div>
+  </div>
+  <div class="hc" style="align-items:flex-end">
+    <div class="hi">O&#8322; (EVA): <span id="h-o2" class="gr">100%</span></div>
+    <div class="hi">SUIT INTEGRITY: <span id="h-suit" class="gr">NOMINAL</span></div>
+    <div class="hi">SIGNAL DELAY: <span>11 MIN 22 SEC</span></div>
+    <div class="hi">CREW: <span id="h-crew" class="gr">6 / 6</span></div>
+  </div>
+</div>
+<div id="day-wrap"><span class="dl">MISSION DAY</span><div id="day-num">221</div></div>
+
+<!-- CHAPTER FLASH -->
+<div id="chapter-flash">
+  <div class="cf-big" id="cf-big">THE LONG WAY HOME</div>
+  <div class="cf-sub" id="cf-sub">DAY 221 &middot; ENGINE FAULT DETECTED</div>
+</div>
+
+<!-- ═══════════ SCREEN 1: FAULT DISCOVERED ═══════════ -->
+<div class="screen active" id="s-fault">
+  <div class="card danger-card">
+    <div class="card-tag danger-tag">DAY 221 &middot; 04:37 LOCAL &middot; CRITICAL FAULT</div>
+    <div class="card-title"><span class="rd">ENGINE</span><br>FAILURE</div>
+    <div class="card-body">
+      Pre-launch diagnostics. Everything green. Then &mdash; one line.<br><br>
+      <span class="rd">MAIN ENGINE · COMBUSTION CHAMBER · MICROCRACK DETECTED · ABORT LAUNCH</span><br><br>
+      The storm. The one they weathered on Day 214. The pressure cycles had done something to the alloy. A hairline fracture, invisible from inside the ship.<br><br>
+      If they light the engine now, <span class="hl">it catastrophically fails at full thrust.</span><br><br>
+      Engineer Kowalski pulled on her EVA suit without a word. Someone had to go outside and fix it.
+    </div>
+    <div class="card-stats">
+      <div class="cs"><div class="cs-n rd">ABORT</div><div class="cs-l">LAUNCH STATUS</div></div>
+      <div class="cs"><div class="cs-n yl">42 MIN</div><div class="cs-l">STORM ETA</div></div>
+      <div class="cs"><div class="cs-n">4</div><div class="cs-l">REPAIR TASKS</div></div>
+      <div class="cs"><div class="cs-n">22 MIN</div><div class="cs-l">HOUSTON ROUNDTRIP</div></div>
+    </div>
+    <div class="card-btns">
+      <button class="btn-danger" id="btn-begin-eva">BEGIN EMERGENCY EVA</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 2: EVA REPAIR ═══════════ -->
+<div class="screen" id="s-eva">
+  <!-- Repair panel -->
+  <div id="repair-panel">
+    <canvas id="eng-canvas" style="position:fixed;inset:0;z-index:26;pointer-events:none;"></canvas>
+
+    <!-- Repair task hotspots — positioned by JS -->
+    <div id="task-container"></div>
+
+    <!-- Repair progress HUD -->
+    <div id="repair-hud">
+      <div class="rh-title">&#9888; REPAIR CHECKLIST</div>
+      <div class="rh-item"><div class="rh-dot" id="rh1"></div><span id="rh1-lbl">SEAL MICROCRACK — SECTION A</span></div>
+      <div class="rh-item"><div class="rh-dot" id="rh2"></div><span id="rh2-lbl">APPLY THERMAL PATCH — B</span></div>
+      <div class="rh-item"><div class="rh-dot" id="rh3"></div><span id="rh3-lbl">REATTACH COOLANT LINE</span></div>
+      <div class="rh-item"><div class="rh-dot" id="rh4"></div><span id="rh4-lbl">IGNITER TEST — VERIFY</span></div>
+    </div>
+
+    <!-- Storm countdown bar -->
+    <div id="storm-bar-wrap" class="show">
+      <div class="sb-label"><span>&#9650; STORM APPROACHING</span><span id="storm-timer">42:00</span></div>
+      <div id="storm-track"><div id="storm-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Instruction overlay (shows briefly) -->
+  <div id="eva-intro" style="position:fixed;inset:0;z-index:27;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,2,0,0.88);transition:opacity 1s;">
+    <div style="font-family:var(--font-m);font-size:9px;color:var(--red);letter-spacing:0.3em;margin-bottom:12px;">EVA-02 INITIATED</div>
+    <div style="font-family:var(--font-d);font-size:clamp(32px,5vw,64px);color:var(--white);letter-spacing:0.08em;line-height:0.9;margin-bottom:20px;">KOWALSKI<br>OUTSIDE</div>
+    <div style="font-family:var(--font-m);font-size:11px;color:rgba(237,232,224,0.55);letter-spacing:0.12em;line-height:1.9;max-width:400px;text-align:center;">
+      The engine is on the ship&rsquo;s aft section.<br>
+      Locate all 4 fault points and click to repair.<br>
+      <span style="color:var(--red);">The storm arrives in 42 minutes.</span>
+    </div>
+    <button id="btn-start-repair" style="margin-top:24px;font-family:var(--font-d);font-size:20px;letter-spacing:0.18em;color:var(--black);background:linear-gradient(135deg,var(--red),#991111);border:none;padding:14px 44px;border-radius:2px;cursor:none;">SUIT UP &mdash; BEGIN REPAIR</button>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 3: ALL REPAIRED — PRE LAUNCH ═══════════ -->
+<div class="screen" id="s-prelaunch">
+  <div class="card">
+    <div class="card-tag" style="color:var(--green)">ENGINE REPAIR COMPLETE &middot; ALL SYSTEMS NOMINAL</div>
+    <div class="card-title">BACK<br>ABOARD</div>
+    <div class="card-body">
+      Kowalski sealed the airlock. Suit pressure equalizing. Outside, the sky had gone <span class="hl">deep ochre — the storm's advance guard</span>.<br><br>
+      37 minutes. That's how long she had. She finished with nine to spare.<br><br>
+      Commander Chen ran the engine diagnostic.<br>
+      Green. All green.<br><br>
+      <span class="gr">"Houston &mdash; Ares Seven. Engine nominal. Initiating launch sequence. We are coming home."</span>
+    </div>
+    <div class="card-stats">
+      <div class="cs"><div class="cs-n gr">GO</div><div class="cs-l">ENGINE STATUS</div></div>
+      <div class="cs"><div class="cs-n yl">9 MIN</div><div class="cs-l">MARGIN REMAINING</div></div>
+      <div class="cs"><div class="cs-n gr">6/6</div><div class="cs-l">CREW ABOARD</div></div>
+      <div class="cs"><div class="cs-n">204 M/S</div><div class="cs-l">ASCENT DELTA-V</div></div>
+    </div>
+    <div class="card-btns">
+      <button class="btn-green" id="btn-launch">INITIATE LAUNCH SEQUENCE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ LAUNCH SEQUENCE OVERLAY ═══════════ -->
+<div id="launch-seq">
+  <div id="countdown-big">5</div>
+  <div id="liftoff-text">LIFTOFF</div>
+</div>
+
+<!-- ═══════════ SCREEN 4: LEAVING MARS ═══════════ -->
+<div class="screen" id="s-leaving">
+  <div class="space-card">
+    <div class="space-tag">DAY 221 &middot; ASCENT CONFIRMED &middot; MARS ORBIT IN 12 MIN</div>
+    <div class="space-title">LEAVING<br>THE RED</div>
+    <div class="space-body">
+      Through the porthole: Mars falling away.<br><br>
+      The Hellas Basin. The polar ice cap. The scar of Valles Marineris &mdash; a canyon that makes the Grand Canyon look like a scratch.<br><br>
+      And their footprints, somewhere down there in the iron dust. <span class="hl">Forever preserved. No wind strong enough, no rain ever, to erase them.</span><br><br>
+      <span class="gr">They had been there. They had left a mark. And now they were going home.</span>
+    </div>
+    <div class="card-btns" style="margin-top:20px;">
+      <button class="btn-primary" id="btn-transit">ENTER TRANSIT — 7 MONTHS HOME</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 5: PALE BLUE DOT ═══════════ -->
+<div class="screen" id="s-bluedot">
+  <div class="bd-center">
+    <div class="bd-tag">MISSION DAY 431 &middot; 89,000,000 KM FROM MARS</div>
+    <div class="bd-title">A PALE<br><span class="bl">BLUE DOT</span></div>
+    <div class="bd-body">
+      Dr. Okafor pressed her face to the porthole on Day 431.<br>
+      There it was &mdash; <span style="color:var(--accent)">a mote of dust suspended in a sunbeam.</span><br><br>
+      Blue. Achingly blue. The only blue thing in the entire visible universe from where she stood.<br><br>
+      Oceans. Weather. Seven billion people who had no idea they were the most extraordinary thing in the cosmos.<br><br>
+      She thought about the riverbed on Mars. The water that had flowed three billion years ago and gone silent. She thought about how close they had come to silence themselves.<br><br>
+      And then she thought: <span style="color:var(--green)">we are still here. We are still going.</span>
+    </div>
+    <div class="bd-btns">
+      <button class="btn-green" id="btn-continue">CHAPTER 9: HOMECOMING &#8594;</button>
+      <button class="btn-sec" id="btn-restart">&#8592; REPLAY FROM CHAPTER 5</button>
+    </div>
+  </div>
+</div>
+
+<!-- TX BAR -->
+<div id="tx-bar">
+  <div class="tx-icon">ARES7 &#9654;</div>
+  <div id="tx-text">MISSION DAY 221 &middot; ENGINE FAULT DETECTED &middot; LAUNCH ABORT ISSUED</div>
+</div>
+
+<div id="trans-out"></div>
+
+<script>
+/* ══════════════════════════════════════════
+   CURSOR
+══════════════════════════════════════════ */
+var dot=document.getElementById('cur-dot'),ring=document.getElementById('cur-ring');
+var mx=window.innerWidth/2,my=window.innerHeight/2,rx=mx,ry=my;
+document.addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
+(function animRing(){rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(animRing);})();
+
+/* ══════════════════════════════════════════
+   CANVAS
+══════════════════════════════════════════ */
+var C=document.getElementById('c'),ctx=C.getContext('2d');
+var W=C.width=window.innerWidth,H=C.height=window.innerHeight;
+window.addEventListener('resize',function(){W=C.width=window.innerWidth;H=C.height=window.innerHeight;buildMarsGround();});
+
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+var currentScreen='s-fault';
+var phase='mars'; // mars | launch | space | bluedot
+var repairsFixed=0;
+var totalRepairs=4;
+var fixedSet=new Set();
+var stormProgress=0; // 0 → 1 over 42 min sim (scaled fast)
+var stormActive=false;
+var launchFired=false;
+var rocketAscendY=0; // canvas coords for launched rocket
+var rocketLaunching=false;
+var rocketLaunchStart=0;
+var spaceStars=[];
+var marsParticles=[];
+var terrainPts=[];
+var engineGlowPulse=0;
+var timeElapsed=0; // seconds sim
+
+/* ══════════════════════════════════════════
+   STARS
+══════════════════════════════════════════ */
+for(var si=0;si<320;si++){
+  spaceStars.push({x:Math.random(),y:Math.random(),r:0.3+Math.random()*1.4,blink:Math.random()*Math.PI*2,speed:0.4+Math.random()*1.2});
+}
+
+/* ══════════════════════════════════════════
+   TERRAIN
+══════════════════════════════════════════ */
+function buildMarsGround(){
+  terrainPts=[];
+  var segs=100;
+  for(var i=0;i<=segs;i++){
+    var x=(i/segs)*W;
+    var y=H*0.72+Math.sin(i*0.22)*28+Math.sin(i*0.08)*48+Math.sin(i*0.44)*14;
+    terrainPts.push({x:x,y:y});
+  }
+  // dust particles
+  marsParticles=[];
+  for(var di=0;di<150;di++){
+    marsParticles.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-0.2)*0.4,vy:-(Math.random()*0.2),
+      r:0.4+Math.random()*2,life:Math.random(),maxLife:0.3+Math.random()*0.7,spd:0.2+Math.random()*0.6});
+  }
+}
+buildMarsGround();
+
+function getTY(x){
+  var segs=terrainPts.length-1,frac=(x/W)*segs,i=Math.floor(frac),t=frac-i;
+  if(i>=segs)return terrainPts[segs].y;
+  return terrainPts[i].y*(1-t)+terrainPts[i+1].y*t;
+}
+
+/* ══════════════════════════════════════════
+   DRAW
+══════════════════════════════════════════ */
+function draw(ts){
+  ctx.clearRect(0,0,W,H);
+  if(phase==='mars'||phase==='launch'){drawMarsScene(ts);}
+  else{drawSpaceScene(ts);}
+}
+
+function drawMarsScene(ts){
+  // Sky — darkens as storm builds
+  var stormDark=stormProgress*0.7;
+  var skyR=Math.floor(55+stormDark*120),skyG=Math.floor(18+stormDark*40),skyB=Math.floor(4);
+  var skyG2=ctx.createLinearGradient(0,0,0,H*0.68);
+  skyG2.addColorStop(0,'rgb('+skyR+','+skyG+','+skyB+')');
+  skyG2.addColorStop(1,'rgb('+(skyR+40)+','+(skyG+15)+',8)');
+  ctx.fillStyle=skyG2;ctx.fillRect(0,0,W,H);
+
+  // Horizon glow
+  var hgR=stormProgress>0.3?180:120,hgG=stormProgress>0.3?60:40;
+  var hg=ctx.createLinearGradient(0,H*0.45,0,H*0.72);
+  hg.addColorStop(0,'rgba('+hgR+','+hgG+',15,0)');
+  hg.addColorStop(1,'rgba('+hgR+','+hgG+',15,0.35)');
+  ctx.fillStyle=hg;ctx.fillRect(0,0,W,H);
+
+  // Storm wall — massive dark gradient rolling in from left
+  if(stormProgress>0.05){
+    var sw=W*(stormProgress*1.4);
+    var stmG=ctx.createLinearGradient(0,0,sw,0);
+    stmG.addColorStop(0,'rgba(60,15,3,'+Math.min(0.85,stormProgress*0.9)+')');
+    stmG.addColorStop(0.7,'rgba(120,40,8,'+stormProgress*0.55+')');
+    stmG.addColorStop(1,'rgba(120,40,8,0)');
+    ctx.fillStyle=stmG;ctx.fillRect(0,0,W,H);
+  }
+
+  // Dust particles
+  marsParticles.forEach(function(p){
+    var windForce=0.05+stormProgress*2.2;
+    p.x+=windForce*p.spd;p.y+=p.vy;p.life-=0.003;
+    if(p.life<=0||p.x>W+10){p.x=p.x>W+10?-4:Math.random()*W;p.y=Math.random()*H;p.life=p.maxLife;}
+    var a=p.life*(0.15+stormProgress*0.6);
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(190,95,30,'+a+')';ctx.fill();
+  });
+
+  // Mountains
+  for(var ml=0;ml<3;ml++){
+    var myB=H*(0.52+ml*0.04),malpha=(0.22-ml*0.05)*(1-stormProgress*0.5);
+    ctx.beginPath();ctx.moveTo(0,myB);
+    for(var lx2=0;lx2<=W;lx2+=16){
+      ctx.lineTo(lx2,myB-(Math.abs(Math.sin(lx2*0.009+ml*2.3)*44+Math.sin(lx2*0.024+ml)*20+Math.sin(lx2*0.004)*60)));
+    }
+    ctx.lineTo(W,myB);ctx.closePath();
+    ctx.fillStyle='rgba('+(75+ml*18)+','+(18+ml*7)+','+(4+ml*2)+','+malpha+')';ctx.fill();
+  }
+
+  // Terrain
+  ctx.beginPath();ctx.moveTo(0,H);
+  terrainPts.forEach(function(pt){ctx.lineTo(pt.x,pt.y);});
+  ctx.lineTo(W,H);ctx.closePath();
+  var tg=ctx.createLinearGradient(0,H*0.6,0,H);
+  tg.addColorStop(0,'#782808');tg.addColorStop(0.5,'#591c06');tg.addColorStop(1,'#381003');
+  ctx.fillStyle=tg;ctx.fill();
+  ctx.beginPath();ctx.moveTo(0,terrainPts[0].y);
+  terrainPts.forEach(function(pt){ctx.lineTo(pt.x,pt.y);});
+  ctx.strokeStyle='rgba(170,70,25,0.4)';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Habitat (left)
+  drawHab(W*0.12,getTY(W*0.12));
+
+  // Lander / rocket on surface (center-right) — with engine glow if repaired
+  var rxPos=W*0.65,ryPos=getTY(W*0.65)-2;
+  engineGlowPulse=Math.sin(ts*0.003)*0.5+0.5;
+  drawGroundRocket(rxPos,ryPos,repairsFixed===totalRepairs,ts);
+
+  // Launching rocket
+  if(rocketLaunching){
+    var elapsed=(ts-rocketLaunchStart)/1000;
+    var ascendFrac=Math.min(1,elapsed/5);
+    var launchY=ryPos-(ascendFrac*ascendFrac)*H*1.4;
+    if(launchY>-120){
+      drawGroundRocket(rxPos,launchY,true,ts,true);
+      // exhaust trail
+      var flen=60+Math.random()*40;
+      var fg=ctx.createLinearGradient(rxPos,launchY+30,rxPos,launchY+30+flen);
+      fg.addColorStop(0,'rgba(255,220,80,0.9)');fg.addColorStop(0.3,'rgba(232,100,20,0.6)');fg.addColorStop(1,'rgba(120,30,5,0)');
+      ctx.beginPath();ctx.moveTo(rxPos-10,launchY+28);ctx.lineTo(rxPos,launchY+30+flen);ctx.lineTo(rxPos+10,launchY+28);ctx.closePath();
+      ctx.fillStyle=fg;ctx.fill();
+      // shockwave rings
+      for(var ri=0;ri<3;ri++){
+        var rr=20+ri*18+(elapsed*60%20);
+        var ra=Math.max(0,0.5-rr/80-ri*0.15);
+        ctx.beginPath();ctx.arc(rxPos,ryPos,rr,0,Math.PI*2);
+        ctx.strokeStyle='rgba(232,148,58,'+ra+')';ctx.lineWidth=1.5;ctx.stroke();
+      }
+    }
+  }
+}
+
+function drawHab(x,y){
+  ctx.save();ctx.translate(x,y);
+  ctx.beginPath();ctx.rect(-34,-16,68,16);ctx.fillStyle='rgba(38,46,62,0.92)';ctx.strokeStyle='rgba(79,195,247,0.15)';ctx.lineWidth=1;ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.ellipse(0,-16,34,24,0,Math.PI,0);ctx.fillStyle='rgba(48,56,78,0.88)';ctx.fill();ctx.stroke();
+  for(var wi=-2;wi<=2;wi++){ctx.beginPath();ctx.arc(wi*12,-14,3,0,Math.PI*2);ctx.fillStyle='rgba(180,220,255,0.22)';ctx.strokeStyle='rgba(79,195,247,0.35)';ctx.lineWidth=0.5;ctx.fill();ctx.stroke();}
+  ctx.restore();
+}
+
+function drawGroundRocket(x,y,engineOk,ts,flying){
+  ctx.save();ctx.translate(x,y);
+  if(flying) ctx.rotate(Math.sin(ts*0.008)*0.04);
+  // struts (only when grounded)
+  if(!flying){
+    [[-28,14],[28,14]].forEach(function(d){
+      ctx.beginPath();ctx.moveTo(-6,0);ctx.lineTo(d[0],d[1]);ctx.strokeStyle='rgba(150,160,180,0.65)';ctx.lineWidth=2;ctx.stroke();
+      ctx.beginPath();ctx.moveTo(d[0]-7,d[1]);ctx.lineTo(d[0]+7,d[1]);ctx.strokeStyle='rgba(150,160,180,0.5)';ctx.lineWidth=3;ctx.stroke();
+    });
+  }
+  // engine bell
+  ctx.beginPath();ctx.moveTo(-16,-6);ctx.lineTo(-26,-10);ctx.lineTo(-26,10);ctx.lineTo(-16,6);ctx.closePath();
+  ctx.fillStyle='rgba(122,34,8,0.55)';ctx.strokeStyle=engineOk?'rgba(57,255,137,0.7)':'rgba(255,68,68,0.7)';ctx.lineWidth=1;ctx.fill();ctx.stroke();
+  // body
+  ctx.beginPath();ctx.moveTo(20,0);ctx.lineTo(8,-8);ctx.lineTo(-16,-7);ctx.lineTo(-20,0);ctx.lineTo(-16,7);ctx.lineTo(8,8);ctx.closePath();
+  var bg=ctx.createLinearGradient(-20,-9,8,9);bg.addColorStop(0,'#1a1f2e');bg.addColorStop(0.5,'#2e3548');bg.addColorStop(1,'#1a1f2e');
+  ctx.fillStyle=bg;ctx.strokeStyle='rgba(79,195,247,0.2)';ctx.lineWidth=0.8;ctx.fill();ctx.stroke();
+  // nose
+  ctx.beginPath();ctx.moveTo(20,0);ctx.lineTo(8,-8);ctx.lineTo(8,8);ctx.closePath();
+  ctx.fillStyle='rgba(232,148,58,0.32)';ctx.strokeStyle='#E8943A';ctx.lineWidth=0.7;ctx.fill();ctx.stroke();
+  // fins
+  [[-12,-7,-24,-18,-20,-7],[-12,7,-24,18,-20,7]].forEach(function(f){
+    ctx.beginPath();ctx.moveTo(f[0],f[1]);ctx.lineTo(f[2],f[3]);ctx.lineTo(f[4],f[5]);ctx.closePath();
+    ctx.fillStyle='rgba(232,148,58,0.18)';ctx.strokeStyle='rgba(232,148,58,0.55)';ctx.lineWidth=0.7;ctx.fill();ctx.stroke();
+  });
+  // window
+  ctx.beginPath();ctx.arc(4,0,3.2,0,Math.PI*2);ctx.fillStyle='rgba(79,195,247,0.18)';ctx.strokeStyle='rgba(79,195,247,0.5)';ctx.lineWidth=0.6;ctx.fill();ctx.stroke();
+  // engine glow
+  var egcol=engineOk?'57,255,137':'255,68,68';
+  var egAlpha=engineOk?(flying?0.7:0.12+engineGlowPulse*0.08):0.18+engineGlowPulse*0.14;
+  var eg=ctx.createRadialGradient(-26,0,0,-26,0,18);
+  eg.addColorStop(0,'rgba('+egcol+','+egAlpha+')');eg.addColorStop(1,'rgba('+egcol+',0)');
+  ctx.beginPath();ctx.arc(-26,0,18,0,Math.PI*2);ctx.fillStyle=eg;ctx.fill();
+  // fault crack indicator (when broken)
+  if(!engineOk&&repairsFixed<totalRepairs){
+    ctx.save();ctx.strokeStyle='rgba(255,68,68,0.8)';ctx.lineWidth=1;ctx.setLineDash([2,3]);
+    ctx.beginPath();ctx.moveTo(-20,-4);ctx.lineTo(-14,-1);ctx.lineTo(-18,3);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawSpaceScene(ts){
+  // Deep space BG
+  var spBg=ctx.createLinearGradient(0,0,0,H);
+  if(phase==='bluedot'){
+    spBg.addColorStop(0,'#02040A');spBg.addColorStop(1,'#050810');
+  } else {
+    spBg.addColorStop(0,'#04060E');spBg.addColorStop(1,'#0c0400');
+  }
+  ctx.fillStyle=spBg;ctx.fillRect(0,0,W,H);
+
+  // Stars
+  spaceStars.forEach(function(s){
+    var a=0.4+Math.sin(ts*0.001*s.speed+s.blink)*0.5;
+    ctx.beginPath();ctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(237,232,224,'+a+')';ctx.fill();
+  });
+
+  if(phase==='space'){
+    // Mars receding (small)
+    var marsR=Math.max(4,60-timeElapsed*0.4);
+    var msx=W*0.72,msy=H*0.38;
+    var mg=ctx.createRadialGradient(msx,msy,0,msx,msy,marsR);
+    mg.addColorStop(0,'#c85820');mg.addColorStop(0.6,'#8c2e08');mg.addColorStop(1,'rgba(80,20,5,0)');
+    ctx.beginPath();ctx.arc(msx,msy,marsR,0,Math.PI*2);ctx.fillStyle=mg;ctx.fill();
+    if(marsR>8){
+      ctx.font='10px "Share Tech Mono",monospace';ctx.fillStyle='rgba(184,64,22,0.6)';ctx.textAlign='center';
+      ctx.fillText('MARS',msx,msy-marsR-8);
+    }
+    // Earth appearing (small blue dot)
+    var earthProgress=Math.min(1,timeElapsed/200);
+    var earthR=Math.max(1,earthProgress*28);
+    var exs=W*0.28,eys=H*0.35;
+    if(earthR>1){
+      var emg=ctx.createRadialGradient(exs,eys,0,exs,eys,earthR);
+      emg.addColorStop(0,'rgba(100,180,255,0.9)');emg.addColorStop(0.5,'rgba(40,100,200,0.7)');emg.addColorStop(1,'rgba(10,40,100,0)');
+      ctx.beginPath();ctx.arc(exs,eys,earthR,0,Math.PI*2);ctx.fillStyle=emg;ctx.fill();
+      if(earthR>6){
+        ctx.font='9px "Share Tech Mono",monospace';ctx.fillStyle='rgba(79,195,247,0.7)';ctx.textAlign='center';
+        ctx.fillText('EARTH',exs,eys-earthR-8);
+      }
+    }
+  }
+
+  if(phase==='bluedot'){
+    // THE PALE BLUE DOT — small, perfect, in the distance
+    var bdx=W*0.5,bdy=H*0.28;
+    var sunRay=ctx.createLinearGradient(bdx-200,bdy-120,bdx+200,bdy+80);
+    sunRay.addColorStop(0,'rgba(255,230,180,0)');sunRay.addColorStop(0.4,'rgba(255,230,180,0.04)');sunRay.addColorStop(0.6,'rgba(255,230,180,0.07)');sunRay.addColorStop(1,'rgba(255,230,180,0)');
+    ctx.fillStyle=sunRay;ctx.fillRect(0,0,W,H);
+    // The dot
+    var bdGlow=ctx.createRadialGradient(bdx,bdy,0,bdx,bdy,30);
+    bdGlow.addColorStop(0,'rgba(100,180,255,0.15)');bdGlow.addColorStop(1,'rgba(100,180,255,0)');
+    ctx.beginPath();ctx.arc(bdx,bdy,30,0,Math.PI*2);ctx.fillStyle=bdGlow;ctx.fill();
+    var bdCore=ctx.createRadialGradient(bdx,bdy,0,bdx,bdy,4);
+    bdCore.addColorStop(0,'rgba(180,220,255,0.95)');bdCore.addColorStop(0.5,'rgba(80,150,230,0.8)');bdCore.addColorStop(1,'rgba(40,80,180,0)');
+    ctx.beginPath();ctx.arc(bdx,bdy,4,0,Math.PI*2);ctx.fillStyle=bdCore;ctx.fill();
+    // faint label
+    ctx.font='8px "Share Tech Mono",monospace';ctx.fillStyle='rgba(79,195,247,0.4)';ctx.textAlign='center';
+    ctx.fillText('EARTH',bdx,bdy+22);
+    // Ship — small
+    ctx.save();ctx.translate(W*0.48,H*0.55);ctx.scale(0.55,0.55);
+    ctx.beginPath();ctx.moveTo(20,0);ctx.lineTo(8,-8);ctx.lineTo(-16,-7);ctx.lineTo(-20,0);ctx.lineTo(-16,7);ctx.lineTo(8,8);ctx.closePath();
+    var sbg=ctx.createLinearGradient(-20,-9,8,9);sbg.addColorStop(0,'#1a1f2e');sbg.addColorStop(0.5,'#2e3548');sbg.addColorStop(1,'#1a1f2e');
+    ctx.fillStyle=sbg;ctx.strokeStyle='rgba(79,195,247,0.3)';ctx.lineWidth=0.8;ctx.fill();ctx.stroke();
+    var seg=ctx.createRadialGradient(-26,0,0,-26,0,14);
+    seg.addColorStop(0,'rgba(57,255,137,0.35)');seg.addColorStop(1,'rgba(57,255,137,0)');
+    ctx.beginPath();ctx.arc(-26,0,14,0,Math.PI*2);ctx.fillStyle=seg;ctx.fill();
+    ctx.restore();
+  }
+}
+
+/* ══════════════════════════════════════════
+   ENGINE CANVAS (for repair screen)
+══════════════════════════════════════════ */
+var EC=document.getElementById('eng-canvas'),ectx=null;
+function initEngCanvas(){
+  EC.width=window.innerWidth;EC.height=window.innerHeight;
+  ectx=EC.getContext('2d');
+}
+initEngCanvas();
+window.addEventListener('resize',function(){EC.width=window.innerWidth;EC.height=window.innerHeight;positionTasks();});
+
+function drawEngCanvas(ts){
+  if(!ectx||currentScreen!=='s-eva') return;
+  ectx.clearRect(0,0,EC.width,EC.height);
+  // Dark overlay for contrast
+  ectx.fillStyle='rgba(8,2,0,0.55)';ectx.fillRect(0,0,EC.width,EC.height);
+
+  // Engine schematic — centered large diagram
+  var cx=EC.width*0.5,cy=EC.height*0.5+20,scale=3.2;
+  // Grid bg
+  ectx.save();ectx.globalAlpha=0.06;ectx.strokeStyle='#e8943a';ectx.lineWidth=0.5;
+  for(var gx=0;gx<EC.width;gx+=30){ectx.beginPath();ectx.moveTo(gx,0);ectx.lineTo(gx,EC.height);ectx.stroke();}
+  for(var gy=0;gy<EC.height;gy+=30){ectx.beginPath();ectx.moveTo(0,gy);ectx.lineTo(EC.width,gy);ectx.stroke();}
+  ectx.restore();
+
+  // Title label
+  ectx.font='9px "Share Tech Mono",monospace';ectx.fillStyle='rgba(255,68,68,0.7)';ectx.textAlign='center';
+  ectx.fillText('ARES SEVEN · MAIN ENGINE · FAULT SCHEMATIC',cx,cy-160);
+
+  ectx.save();ectx.translate(cx,cy);ectx.scale(scale,scale);
+
+  // Engine bell
+  var bell=repairsFixed>1;
+  ectx.beginPath();ectx.moveTo(-16,-6);ectx.lineTo(-28,-10);ectx.lineTo(-28,10);ectx.lineTo(-16,6);ectx.closePath();
+  ectx.fillStyle='rgba(122,34,8,0.55)';ectx.strokeStyle=bell?'rgba(57,255,137,0.6)':'rgba(255,68,68,0.6)';ectx.lineWidth=0.7;ectx.fill();ectx.stroke();
+
+  // Body
+  ectx.beginPath();ectx.moveTo(20,0);ectx.lineTo(8,-8);ectx.lineTo(-16,-7);ectx.lineTo(-20,0);ectx.lineTo(-16,7);ectx.lineTo(8,8);ectx.closePath();
+  var ebg=ectx.createLinearGradient(-20,-9,8,9);ebg.addColorStop(0,'#1a1f2e');ebg.addColorStop(0.5,'#2e3548');ebg.addColorStop(1,'#1a1f2e');
+  ectx.fillStyle=ebg;ectx.strokeStyle='rgba(79,195,247,0.18)';ectx.lineWidth=0.6;ectx.fill();ectx.stroke();
+
+  // Nose
+  ectx.beginPath();ectx.moveTo(20,0);ectx.lineTo(8,-8);ectx.lineTo(8,8);ectx.closePath();
+  ectx.fillStyle='rgba(232,148,58,0.3)';ectx.strokeStyle='#E8943A';ectx.lineWidth=0.6;ectx.fill();ectx.stroke();
+
+  // Fins
+  [[-12,-7,-22,-16,-20,-7],[-12,7,-22,16,-20,7]].forEach(function(f){
+    ectx.beginPath();ectx.moveTo(f[0],f[1]);ectx.lineTo(f[2],f[3]);ectx.lineTo(f[4],f[5]);ectx.closePath();
+    ectx.fillStyle='rgba(232,148,58,0.15)';ectx.strokeStyle='rgba(232,148,58,0.5)';ectx.lineWidth=0.6;ectx.fill();ectx.stroke();
+  });
+
+  // Window
+  ectx.beginPath();ectx.arc(4,0,3,0,Math.PI*2);ectx.fillStyle='rgba(79,195,247,0.15)';ectx.strokeStyle='rgba(79,195,247,0.45)';ectx.lineWidth=0.5;ectx.fill();ectx.stroke();
+
+  // Fault lines — animated pulsing cracks when not fixed
+  var tasks2=['crack-a','thermal-b','coolant-c','igniter-d'];
+  var crackPts=[[-19,-2],[-15,1],[-19,2]]; // crack on engine bell
+  if(!fixedSet.has('task1')){
+    ectx.save();ectx.strokeStyle='rgba(255,68,68,'+(0.6+Math.sin(ts*0.006)*0.3)+')';ectx.lineWidth=0.6;
+    ectx.beginPath();ectx.moveTo(-20,-3);ectx.lineTo(-17,-1);ectx.lineTo(-19,2);ectx.stroke();ectx.restore();
+  }
+  if(!fixedSet.has('task2')){
+    ectx.save();ectx.strokeStyle='rgba(255,100,20,'+(0.5+Math.sin(ts*0.005)*0.3)+')';ectx.lineWidth=0.5;
+    ectx.setLineDash([1,1.5]);
+    ectx.beginPath();ectx.moveTo(-14,-5);ectx.lineTo(-10,-4);ectx.lineTo(-12,-2);ectx.lineTo(-9,1);ectx.stroke();
+    ectx.setLineDash([]);ectx.restore();
+  }
+  if(!fixedSet.has('task3')){
+    ectx.save();ectx.strokeStyle='rgba(255,200,40,'+(0.5+Math.sin(ts*0.007)*0.3)+')';ectx.lineWidth=0.5;
+    ectx.beginPath();ectx.arc(-16,5,2.5,0,Math.PI*2);ectx.stroke();ectx.restore();
+  }
+  if(!fixedSet.has('task4')){
+    ectx.save();ectx.fillStyle='rgba(255,68,68,'+(0.4+Math.sin(ts*0.009)*0.3)+')';
+    ectx.beginPath();ectx.arc(-24,0,1.5,0,Math.PI*2);ectx.fill();ectx.restore();
+  }
+
+  ectx.restore();
+}
+
+/* ══════════════════════════════════════════
+   REPAIR TASKS
+══════════════════════════════════════════ */
+var repairTasks=[
+  {id:'task1',label:'MICROCRACK — SEC A',pctX:0.44,pctY:0.46,
+    log:'Sealing Section A. Kowalski applies high-temp ceramic sealant. 4 minutes. The crack is barely visible — she finds it by running her finger along the alloy.'},
+  {id:'task2',label:'THERMAL PATCH — SEC B',pctX:0.52,pctY:0.42,
+    log:'Thermal patch applied to Section B. The material from the patch kit is the color of burnt rust. Strangely fitting.'},
+  {id:'task3',label:'COOLANT LINE',pctX:0.50,pctY:0.54,
+    log:'Coolant line reattached. The clamp clicks twice. She checks it a third time. And a fourth.'},
+  {id:'task4',label:'IGNITER VERIFY',pctX:0.40,pctY:0.50,
+    log:'Igniter circuit test: nominal. All four fault codes clearing. Kowalski exhales for what feels like the first time in 20 minutes.'},
+];
+
+function positionTasks(){
+  var container=document.getElementById('task-container');
+  container.innerHTML='';
+  repairTasks.forEach(function(t){
+    var el=document.createElement('div');
+    el.className='repair-task'+(fixedSet.has(t.id)?' fixed':'');
+    el.id='rt-'+t.id;
+    el.style.cssText='left:'+(t.pctX*window.innerWidth-9)+'px;top:'+(t.pctY*window.innerHeight-9)+'px;';
+    el.innerHTML='<div class="rt-pip"></div><div class="rt-label">'+t.label+'</div>';
+    el.addEventListener('click',function(){doRepair(t);});
+    container.appendChild(el);
+  });
+}
+
+function doRepair(t){
+  if(fixedSet.has(t.id)) return;
+  fixedSet.add(t.id);
+  repairsFixed++;
+  // Update dot
+  var el=document.getElementById('rt-'+t.id);
+  if(el) el.classList.add('fixed');
+  // Update checklist
+  var dotEl=document.getElementById('rh'+repairsFixed);
+  var lblEl=document.getElementById('rh'+repairsFixed+'-lbl');
+  if(dotEl) dotEl.classList.add('done');
+  if(lblEl) lblEl.style.color='var(--green)';
+  showTx('KOWALSKI: '+t.log);
+  updateProgressBar();
+  if(repairsFixed===totalRepairs){
+    setTimeout(triggerRepairComplete,1400);
+  }
+}
+
+function triggerRepairComplete(){
+  ring.classList.remove('danger');
+  stormActive=false;
+  showTx('ALL REPAIRS COMPLETE · Engine diagnostic: GREEN · Return to ship NOW');
+  document.getElementById('storm-bar-wrap').classList.remove('show');
+  setTimeout(function(){switchScreen('s-prelaunch');},2800);
+}
+
+/* ══════════════════════════════════════════
+   STORM COUNTDOWN
+══════════════════════════════════════════ */
+var stormSimStart=null;
+var STORM_DURATION_MS=240000; // 4 min real = 42 min sim
+function tickStorm(ts){
+  if(!stormSimStart||!stormActive) return;
+  var elapsed=ts-stormSimStart;
+  stormProgress=Math.min(1,elapsed/STORM_DURATION_MS);
+  var remaining=Math.max(0,1-stormProgress);
+  var totalSec=Math.round(remaining*42*60);
+  var mm=Math.floor(totalSec/60),ss=totalSec%60;
+  var timerEl=document.getElementById('storm-timer');
+  if(timerEl) timerEl.textContent=(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss;
+  var fillEl=document.getElementById('storm-fill');
+  if(fillEl) fillEl.style.width=(stormProgress*100)+'%';
+  if(stormProgress>0.3) ring.classList.add('danger');
+  if(stormProgress>=1&&repairsFixed<totalRepairs){
+    // storm arrived — mission failed, but we'll handle it gracefully
+    showTx('STORM HIT · Habitat shelter mode activated · EVA suspended · Re-attempt required');
+    stormActive=false;stormProgress=0.9;
+  }
+}
+
+/* ══════════════════════════════════════════
+   LAUNCH SEQUENCE
+══════════════════════════════════════════ */
+function doLaunchSequence(){
+  var seq=document.getElementById('launch-seq');
+  var cdEl=document.getElementById('countdown-big');
+  var ltEl=document.getElementById('liftoff-text');
+  seq.classList.add('show');
+  var counts=[5,4,3,2,1];
+  counts.forEach(function(n,i){
+    setTimeout(function(){cdEl.textContent=n;cdEl.classList.add('show');
+      setTimeout(function(){cdEl.classList.remove('show');},700);},i*1000);
+  });
+  setTimeout(function(){
+    cdEl.style.display='none';ltEl.classList.add('show');
+    rocketLaunching=true;rocketLaunchStart=performance.now();
+    showTx('ARES SEVEN — LIFTOFF · Main engine NOMINAL · Ascent trajectory confirmed');
+  },5200);
+  setTimeout(function(){
+    seq.classList.remove('show');
+    phase='space';
+    switchScreen('s-leaving');
+    updateProgressBar();
+    document.getElementById('day-num').textContent='221';
+  },8500);
+}
+
+/* ══════════════════════════════════════════
+   SCREEN & HUD
+══════════════════════════════════════════ */
+function switchScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  currentScreen=id;
+  document.getElementById(id).classList.add('active');
+}
+
+var txTO=null;
+function showTx(msg){
+  clearTimeout(txTO);
+  document.getElementById('tx-text').textContent=msg;
+  txTO=setTimeout(function(){document.getElementById('tx-text').textContent='';},9000);
+}
+
+var progressMap={'s-fault':20,'s-eva':45,'s-prelaunch':60,'s-leaving':78,'s-space':88,'s-bluedot':100};
+function updateProgressBar(){
+  var pct=progressMap[currentScreen]||20;
+  document.getElementById('pb-fill').style.width=pct+'%';
+}
+
+function updateHUD(ts){
+  if(phase==='mars'){
+    var remaining2=Math.max(0,1-stormProgress);
+    var totalSec2=Math.round(remaining2*42*60);
+    var mm2=Math.floor(totalSec2/60),ss2=totalSec2%60;
+    document.getElementById('h-storm').textContent='T-'+(mm2<10?'0':'')+mm2+':'+(ss2<10?'0':'')+ss2;
+    if(stormProgress>0.5) document.getElementById('h-storm').className='rd';
+    var o2=currentScreen==='s-eva'?Math.max(50,100-stormProgress*60):100;
+    document.getElementById('h-o2').textContent=Math.round(o2)+'%';
+    document.getElementById('h-o2').className=o2<65?'rd':o2<80?'yl':'gr';
+    document.getElementById('h-eng').textContent=repairsFixed===totalRepairs?'NOMINAL':'FAULT';
+    document.getElementById('h-eng').className=repairsFixed===totalRepairs?'gr':'rd';
+    if(currentScreen==='s-prelaunch'){document.getElementById('day-num').textContent='221';}
+  }
+  if(phase==='space'||phase==='bluedot'){
+    document.getElementById('h-eng').textContent='NOMINAL';document.getElementById('h-eng').className='gr';
+    document.getElementById('h-storm').textContent='N/A';document.getElementById('h-storm').className='gr';
+  }
+}
+
+/* ══════════════════════════════════════════
+   MAIN LOOP
+══════════════════════════════════════════ */
+var lastT=0;
+function loop(ts){
+  var dt=Math.min(ts-lastT,50);lastT=ts;
+  timeElapsed+=dt*0.02;
+  tickStorm(ts);
+  draw(ts);
+  drawEngCanvas(ts);
+  updateHUD(ts);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(function(t){lastT=t;loop(t);});
+
+/* ══════════════════════════════════════════
+   CHAPTER FLASH
+══════════════════════════════════════════ */
+var cf=document.getElementById('chapter-flash');
+setTimeout(function(){cf.style.transition='opacity 0.9s';cf.style.opacity='1';},400);
+setTimeout(function(){cf.style.opacity='0';},3000);
+setTimeout(function(){showTx('MISSION DAY 221 · PRE-LAUNCH DIAGNOSTICS FAILED · MAIN ENGINE FAULT · STORM INBOUND T-42:00');},900);
+
+/* ══════════════════════════════════════════
+   BUTTON EVENTS
+══════════════════════════════════════════ */
+document.getElementById('btn-begin-eva').addEventListener('click',function(){
+  switchScreen('s-eva');
+  updateProgressBar();
+  showTx('EVA-02 INITIATED · Kowalski suiting up · 4 fault points detected on engine assembly');
+});
+
+document.getElementById('btn-start-repair').addEventListener('click',function(){
+  var intro=document.getElementById('eva-intro');
+  intro.style.opacity='0';
+  setTimeout(function(){intro.style.display='none';},900);
+  document.getElementById('repair-panel').classList.add('show');
+  document.getElementById('repair-hud').classList.add('show');
+  stormActive=true;stormSimStart=performance.now();
+  positionTasks();
+  showTx('KOWALSKI OUTSIDE · Locate fault points on the engine assembly · Click each to repair');
+});
+
+document.getElementById('btn-launch').addEventListener('click',function(){
+  doLaunchSequence();
+  updateProgressBar();
+});
+
+document.getElementById('btn-transit').addEventListener('click',function(){
+  phase='bluedot';
+  document.getElementById('day-num').textContent='431';
+  switchScreen('s-bluedot');
+  updateProgressBar();
+  showTx('MISSION DAY 431 · 89,000,000 KM FROM MARS · EARTH APPROACH CONFIRMED · ETA 38 DAYS');
+});
+
+document.getElementById('btn-continue').addEventListener('click',function(){
+  document.getElementById('trans-out').classList.add('on');
+  setTimeout(function(){window.location.href='section9.html';},1500);
+});
+document.getElementById('btn-restart').addEventListener('click',function(){
+  document.getElementById('trans-out').classList.add('on');
+  setTimeout(function(){window.location.href='section5.html';},1500);
+});
+</script>
+</body>
+</html>
