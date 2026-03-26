@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journey to Mars — Chapter 9: Homecoming</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --black:#02040A;--rust:#7A2208;--mars:#B84016;--flame:#E8943A;
+  --ember:#F5A623;--white:#EDE8E0;--muted:#4A5568;--dim:#2D3748;
+  --accent:#4FC3F7;--green:#39FF89;--red:#FF4444;--gold:#FFD700;
+  --sky:#87CEEB;--ocean:#1a6b8a;
+  --font-d:"Bebas Neue",sans-serif;--font-b:"Rajdhani",sans-serif;--font-m:"Share Tech Mono",monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#02040A;cursor:none;user-select:none;}
+
+/* ── CURSOR ── */
+#cur-dot{position:fixed;z-index:9999;width:8px;height:8px;background:var(--ember);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);mix-blend-mode:screen;}
+#cur-ring{position:fixed;z-index:9998;width:32px;height:32px;border:1px solid rgba(232,148,58,0.4);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);transition:width 0.2s,height 0.2s,border-color 0.2s;}
+#cur-ring.triumph{border-color:rgba(255,215,0,0.7);width:40px;height:40px;}
+
+/* ── GRAIN ── */
+body::after{content:"";position:fixed;inset:0;z-index:96;pointer-events:none;opacity:0.14;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");}
+
+/* ── SCANLINES ── */
+#scanlines{position:fixed;inset:0;z-index:95;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,transparent,transparent 2px,rgba(0,0,0,0.045) 2px,rgba(0,0,0,0.045) 4px);}
+
+canvas{position:fixed;inset:0;z-index:0;display:block;}
+
+/* ── PROGRESS BAR ── */
+#pb-wrap{position:fixed;top:0;left:0;right:0;height:3px;z-index:40;background:rgba(255,255,255,0.04);}
+#pb-fill{height:100%;background:linear-gradient(to right,var(--accent),var(--green),var(--gold));transition:width 0.8s ease;}
+
+/* ── HUD ── */
+#hud{position:fixed;top:0;left:0;right:0;z-index:30;padding:16px 28px 32px;
+  background:linear-gradient(to bottom,rgba(2,4,10,0.97),transparent);
+  display:flex;justify-content:space-between;pointer-events:none;}
+.hc{display:flex;flex-direction:column;gap:4px;}
+.hi{font-family:var(--font-m);font-size:clamp(9px,1.1vw,11px);color:rgba(100,150,200,0.65);letter-spacing:0.14em;}
+.hi span{color:var(--accent);}
+.hi .gr{color:var(--green);}
+.hi .gd{color:var(--gold);animation:shimmer 2s infinite;}
+.hi .rd{color:var(--red);animation:blink 0.7s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+@keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.6}}
+
+/* ── DAY ── */
+#day-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:31;text-align:center;pointer-events:none;}
+.dl{font-family:var(--font-m);font-size:9px;color:rgba(100,160,220,0.65);letter-spacing:0.28em;display:block;margin-bottom:2px;}
+#day-num{font-family:var(--font-d);font-size:clamp(28px,3.5vw,48px);letter-spacing:0.06em;color:var(--white);line-height:1;}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 1.4s;}
+.screen.active{opacity:1;pointer-events:all;}
+
+/* ── CARDS ── */
+.card{background:rgba(2,4,10,0.92);border:1px solid rgba(79,195,247,0.16);border-left:2px solid var(--accent);max-width:580px;width:90vw;padding:26px 30px;}
+.card.gold-card{border-color:rgba(255,215,0,0.25);border-left-color:var(--gold);}
+.card.green-card{border-color:rgba(57,255,137,0.2);border-left-color:var(--green);}
+.card-tag{font-family:var(--font-m);font-size:9px;color:var(--accent);letter-spacing:0.28em;margin-bottom:10px;}
+.card-tag.gold-tag{color:var(--gold);}
+.card-tag.green-tag{color:var(--green);}
+.card-title{font-family:var(--font-d);font-size:clamp(32px,5vw,70px);letter-spacing:0.07em;color:var(--white);line-height:0.9;margin-bottom:14px;}
+.card-title .bl{color:var(--accent);}
+.card-title .gd{color:var(--gold);}
+.card-title .gr{color:var(--green);}
+.card-body{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:rgba(237,232,224,0.65);letter-spacing:0.06em;line-height:2;}
+.card-body .hl{color:var(--accent);}
+.card-body .gd{color:var(--gold);}
+.card-body .gr{color:var(--green);}
+.card-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px;}
+.cs{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);padding:10px 12px;text-align:center;}
+.cs-n{font-family:var(--font-d);font-size:22px;color:var(--accent);letter-spacing:0.04em;line-height:1;}
+.cs-n.gr{color:var(--green);}
+.cs-n.gd{color:var(--gold);}
+.cs-l{font-family:var(--font-m);font-size:7px;color:var(--muted);letter-spacing:0.16em;margin-top:3px;}
+.card-btns{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;}
+
+/* ── BUTTONS ── */
+.btn-primary{font-family:var(--font-d);font-size:18px;letter-spacing:0.16em;color:var(--black);
+  background:linear-gradient(135deg,var(--flame),var(--mars));border:none;padding:13px 36px;border-radius:2px;cursor:none;transition:transform 0.2s,box-shadow 0.2s;}
+.btn-primary:hover{transform:scale(1.04);box-shadow:0 0 36px rgba(232,148,58,0.45);}
+.btn-gold{font-family:var(--font-d);font-size:18px;letter-spacing:0.16em;color:var(--black);
+  background:linear-gradient(135deg,var(--gold),#e6a800);border:none;padding:13px 36px;border-radius:2px;cursor:none;transition:transform 0.2s,box-shadow 0.2s;}
+.btn-gold:hover{transform:scale(1.04);box-shadow:0 0 40px rgba(255,215,0,0.5);}
+.btn-green{font-family:var(--font-d);font-size:18px;letter-spacing:0.16em;color:var(--black);
+  background:linear-gradient(135deg,var(--green),#0ea86b);border:none;padding:13px 36px;border-radius:2px;cursor:none;transition:transform 0.2s,box-shadow 0.2s;}
+.btn-green:hover{transform:scale(1.04);box-shadow:0 0 36px rgba(57,255,137,0.4);}
+.btn-sec{font-family:var(--font-m);font-size:11px;letter-spacing:0.14em;color:var(--muted);
+  background:transparent;border:1px solid rgba(255,255,255,0.1);padding:13px 24px;border-radius:2px;cursor:none;transition:color 0.2s,border-color 0.2s;}
+.btn-sec:hover{color:var(--white);border-color:rgba(255,255,255,0.3);}
+
+/* ── RE-ENTRY GLOW RING ── */
+#reentry-ring{position:fixed;inset:0;z-index:18;pointer-events:none;opacity:0;transition:opacity 2s;
+  background:radial-gradient(ellipse at 50% 110%,rgba(255,140,0,0.18) 0%,transparent 60%);}
+#reentry-ring.show{opacity:1;}
+
+/* ── SPLASHDOWN RIPPLE ── */
+#splash-ring{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:19;pointer-events:none;opacity:0;}
+@keyframes ripple{0%{opacity:0.7;width:40px;height:40px;margin-left:-20px;bottom:-20px;}
+  100%{opacity:0;width:600px;height:200px;margin-left:-300px;bottom:-100px;border-radius:50%;}}
+
+/* ── CROWD CHEER INDICATOR ── */
+#crowd-bar{position:fixed;bottom:62px;left:50%;transform:translateX(-50%);z-index:32;
+  width:clamp(200px,32vw,360px);pointer-events:none;opacity:0;transition:opacity 0.6s;}
+#crowd-bar.show{opacity:1;}
+.cb-label{font-family:var(--font-m);font-size:9px;color:var(--green);letter-spacing:0.24em;
+  display:flex;justify-content:space-between;margin-bottom:5px;}
+#crowd-track{height:4px;background:rgba(57,255,137,0.1);border:1px solid rgba(57,255,137,0.2);}
+#crowd-fill{height:100%;background:linear-gradient(to right,var(--accent),var(--green),var(--gold));width:0%;transition:width 0.4s ease;}
+
+/* ── CHAPTER FLASH ── */
+#chapter-flash{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:55;
+  pointer-events:none;text-align:center;opacity:0;transition:opacity 0.9s;}
+.cf-big{font-family:var(--font-d);font-size:clamp(38px,6.5vw,88px);letter-spacing:0.09em;color:var(--white);
+  text-shadow:0 0 60px rgba(237,232,224,0.2);line-height:0.9;}
+.cf-sub{font-family:var(--font-m);font-size:clamp(9px,1.2vw,12px);color:rgba(130,180,220,0.7);letter-spacing:0.26em;margin-top:12px;}
+
+/* ── TX BAR ── */
+#tx-bar{position:fixed;bottom:0;left:0;right:0;z-index:30;padding:10px 28px 16px;
+  background:linear-gradient(to top,rgba(2,4,10,0.98),transparent);
+  display:flex;align-items:flex-start;gap:10px;pointer-events:none;}
+.tx-icon{font-family:var(--font-m);font-size:9px;color:var(--accent);letter-spacing:0.18em;white-space:nowrap;padding-top:2px;flex-shrink:0;}
+#tx-text{font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:var(--white);letter-spacing:0.08em;line-height:1.6;}
+
+/* ── TICKER ── */
+#ticker-wrap{position:fixed;top:56px;left:0;right:0;z-index:29;pointer-events:none;overflow:hidden;height:22px;opacity:0;transition:opacity 0.8s;}
+#ticker-wrap.show{opacity:1;}
+#ticker-inner{display:flex;gap:0;white-space:nowrap;animation:tickerScroll 28s linear infinite;}
+.tick-item{font-family:var(--font-m);font-size:9px;color:rgba(79,195,247,0.55);letter-spacing:0.2em;padding:4px 40px 4px 0;border-right:1px solid rgba(79,195,247,0.1);}
+@keyframes tickerScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ── REENTRY SCREEN ── */
+#s-reentry{background:transparent;}
+
+/* ── SPLASHDOWN SCREEN ── */
+#s-splashdown{background:transparent;}
+
+/* ── RECOVERY SCREEN ── */
+#s-recovery{background:transparent;}
+
+/* ── PARADE SCREEN ── */
+#s-parade{background:transparent;}
+.parade-card{background:rgba(2,4,10,0.88);border:1px solid rgba(255,215,0,0.2);border-left:2px solid var(--gold);max-width:560px;width:90vw;padding:26px 30px;}
+
+/* ── TRANS ── */
+#trans-out{position:fixed;inset:0;z-index:80;background:#02040A;opacity:0;pointer-events:none;transition:opacity 1.5s;}
+#trans-out.on{opacity:1;pointer-events:all;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulseGlow{0%,100%{text-shadow:0 0 40px rgba(255,215,0,0.4)}50%{text-shadow:0 0 80px rgba(255,215,0,0.8),0 0 120px rgba(255,215,0,0.3)}}
+</style>
+</head>
+<body>
+<div id="cur-dot"></div><div id="cur-ring"></div>
+<div id="scanlines"></div>
+<canvas id="c"></canvas>
+<div id="reentry-ring"></div>
+
+<div id="pb-wrap"><div id="pb-fill" style="width:88%"></div></div>
+
+<!-- TICKER -->
+<div id="ticker-wrap" id="ticker-wrap">
+  <div id="ticker-inner">
+    <span class="tick-item">ARES SEVEN APPROACHING ENTRY INTERFACE 125KM</span>
+    <span class="tick-item">COMM BLACKOUT WINDOW: 7 MIN 42 SEC</span>
+    <span class="tick-item">RECOVERY FLEET POSITIONED · PACIFIC SECTOR 4</span>
+    <span class="tick-item">GLOBAL VIEWERS: 4.2 BILLION LIVE</span>
+    <span class="tick-item">CAPSULE INTEGRITY: NOMINAL · TPS TEMP: 2,760°C</span>
+    <span class="tick-item">MISSION DURATION: 469 DAYS · ALL CREW NOMINAL</span>
+    <span class="tick-item">ARES SEVEN APPROACHING ENTRY INTERFACE 125KM</span>
+    <span class="tick-item">COMM BLACKOUT WINDOW: 7 MIN 42 SEC</span>
+    <span class="tick-item">RECOVERY FLEET POSITIONED · PACIFIC SECTOR 4</span>
+    <span class="tick-item">GLOBAL VIEWERS: 4.2 BILLION LIVE</span>
+    <span class="tick-item">CAPSULE INTEGRITY: NOMINAL · TPS TEMP: 2,760°C</span>
+    <span class="tick-item">MISSION DURATION: 469 DAYS · ALL CREW NOMINAL</span>
+  </div>
+</div>
+
+<div id="hud">
+  <div class="hc">
+    <div class="hi">VELOCITY: <span id="h-vel">10.2 KM/S</span></div>
+    <div class="hi">ALTITUDE: <span id="h-alt">125 KM</span></div>
+    <div class="hi">TPS TEMP: <span id="h-tps" class="gr">NOMINAL</span></div>
+    <div class="hi">BLACKOUT: <span id="h-blackout">STANDBY</span></div>
+  </div>
+  <div class="hc" style="align-items:flex-end">
+    <div class="hi">CHUTES: <span id="h-chutes" class="gr">ARMED</span></div>
+    <div class="hi">CREW: <span class="gr">6 / 6</span></div>
+    <div class="hi">RECOVERY FLEET: <span class="gr">STANDING BY</span></div>
+    <div class="hi">EARTH SIGNAL: <span id="h-signal" class="gr">STRONG</span></div>
+  </div>
+</div>
+<div id="day-wrap"><span class="dl">MISSION DAY</span><div id="day-num">469</div></div>
+
+<!-- CHAPTER FLASH -->
+<div id="chapter-flash">
+  <div class="cf-big">HOMECOMING</div>
+  <div class="cf-sub">DAY 469 &middot; ENTRY INTERFACE IN 4 MINUTES</div>
+</div>
+
+<!-- ═══════════ SCREEN 1: RE-ENTRY APPROACH ═══════════ -->
+<div class="screen active" id="s-reentry">
+  <div class="card">
+    <div class="card-tag">DAY 469 &middot; 14:02 UTC &middot; ENTRY MINUS 4 MIN</div>
+    <div class="card-title"><span class="bl">ENTRY</span><br>INTERFACE</div>
+    <div class="card-body">
+      469 days. Seven months out, seven months back, and 63 days on the surface of another world.<br><br>
+      From here, Earth fills <span class="hl">half the porthole.</span> Blue and white, impossibly vivid. The crew hasn't spoken in ten minutes. They're just looking.<br><br>
+      The capsule begins to orientate. Blunt end forward. They'll hit atmosphere at <span class="hl">10.2 kilometres per second</span> — 36,700 km/h — and the air in front of them will compress so violently it glows.<br><br>
+      Mission Control goes quiet. For the next <span class="gd">7 minutes 42 seconds</span>, plasma will surround the capsule and block every signal. No comms. No telemetry. Just silence on Earth, and fire in the sky.
+    </div>
+    <div class="card-stats">
+      <div class="cs"><div class="cs-n">469</div><div class="cs-l">MISSION DAYS</div></div>
+      <div class="cs"><div class="cs-n gd">7M 42S</div><div class="cs-l">BLACKOUT WINDOW</div></div>
+      <div class="cs"><div class="cs-n">10.2</div><div class="cs-l">ENTRY VELOCITY KM/S</div></div>
+      <div class="cs"><div class="cs-n gr">6/6</div><div class="cs-l">CREW NOMINAL</div></div>
+    </div>
+    <div class="card-btns">
+      <button class="btn-primary" id="btn-begin-entry">INITIATE RE-ENTRY SEQUENCE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 2: BLACKOUT ═══════════ -->
+<div class="screen" id="s-blackout">
+  <div style="text-align:center;max-width:480px;width:90vw;">
+    <div style="font-family:var(--font-m);font-size:9px;color:rgba(79,195,247,0.5);letter-spacing:0.32em;margin-bottom:20px;animation:fadeUp 0.6s both;">ARES7 &#9654; HOUSTON</div>
+    <div style="font-family:var(--font-d);font-size:clamp(44px,8vw,108px);letter-spacing:0.08em;color:var(--white);line-height:0.88;animation:fadeUp 0.7s 0.2s both;">COMM<br>BLACKOUT</div>
+    <div style="font-family:var(--font-m);font-size:clamp(10px,1.4vw,13px);color:rgba(237,232,224,0.5);letter-spacing:0.1em;line-height:2;margin-top:24px;animation:fadeUp 0.7s 0.5s both;">
+      Signal lost at entry interface.<br>
+      Plasma sheath nominal.<br>
+      <span style="color:rgba(255,68,68,0.7);">No contact for 7 minutes 42 seconds.</span><br><br>
+      4.2 billion people watching a silent sky.
+    </div>
+    <div id="blackout-timer" style="font-family:var(--font-d);font-size:clamp(52px,9vw,120px);letter-spacing:0.06em;color:var(--accent);
+      text-shadow:0 0 60px rgba(79,195,247,0.4);margin-top:28px;line-height:1;animation:fadeUp 0.7s 0.8s both;">7:42</div>
+    <div style="font-family:var(--font-m);font-size:8px;color:rgba(79,195,247,0.35);letter-spacing:0.3em;margin-top:10px;animation:fadeUp 0.6s 1s both;">BLACKOUT ELAPSED</div>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 3: SIGNAL REACQUIRED ═══════════ -->
+<div class="screen" id="s-signal">
+  <div class="card green-card">
+    <div class="card-tag green-tag">SIGNAL REACQUIRED &middot; 7M 42S BLACKOUT NOMINAL</div>
+    <div class="card-title"><span class="gr">WE HAVE</span><br>SIGNAL</div>
+    <div class="card-body">
+      The line crackled. Static. Then — a voice.<br><br>
+      <span class="gr">"Houston &mdash; Ares Seven. Chutes deployed. All three mains nominal. We are at six thousand metres descending. Crew is good. All six. We are coming home."</span><br><br>
+      Mission Control erupted.<br><br>
+      Seven minutes forty-two seconds of <span class="hl">absolute silence</span>, and then that voice — calm, steady, slightly tearful — and every person in that room stood up at once.
+    </div>
+    <div class="card-stats">
+      <div class="cs"><div class="cs-n gr">ACQUIRED</div><div class="cs-l">SIGNAL STATUS</div></div>
+      <div class="cs"><div class="cs-n gr">3×MAIN</div><div class="cs-l">PARACHUTES</div></div>
+      <div class="cs"><div class="cs-n">6,000 M</div><div class="cs-l">ALTITUDE</div></div>
+      <div class="cs"><div class="cs-n">8.2 M/S</div><div class="cs-l">DESCENT RATE</div></div>
+    </div>
+    <div class="card-btns">
+      <button class="btn-green" id="btn-splashdown">TRACK TO SPLASHDOWN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 4: SPLASHDOWN ═══════════ -->
+<div class="screen" id="s-splashdown">
+  <div class="card gold-card">
+    <div class="card-tag gold-tag">DAY 469 &middot; 14:19 UTC &middot; PACIFIC OCEAN</div>
+    <div class="card-title"><span class="gd">SPLASH</span><br>DOWN</div>
+    <div class="card-body">
+      Contact.<br><br>
+      The capsule hit the Pacific at 8.2 metres per second. Three ring-shaped wakes spread outward across the water. The recovery helicopters were overhead in 90 seconds.<br><br>
+      <span class="gd">Commander Chen opened the hatch.</span><br>
+      Salt air. Ocean spray. The smell of Earth.<br><br>
+      She had not smelled anything except recycled cabin air for 469 days. She pressed her face into the wind and breathed until she cried.
+    </div>
+    <div class="card-stats">
+      <div class="cs"><div class="cs-n gd">14:19</div><div class="cs-l">SPLASHDOWN TIME UTC</div></div>
+      <div class="cs"><div class="cs-n gr">90 SEC</div><div class="cs-l">RECOVERY RESPONSE</div></div>
+      <div class="cs"><div class="cs-n gr">6/6</div><div class="cs-l">CREW RECOVERED</div></div>
+      <div class="cs"><div class="cs-n">469</div><div class="cs-l">DAYS IN SPACE</div></div>
+    </div>
+    <div class="card-btns">
+      <button class="btn-gold" id="btn-recovery">THE WORLD RESPONDS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 5: WORLD RESPONDS ═══════════ -->
+<div class="screen" id="s-recovery">
+  <div class="card" style="max-width:620px;">
+    <div class="card-tag" style="color:var(--white);">THE NEXT 48 HOURS</div>
+    <div class="card-title" style="font-size:clamp(28px,4.5vw,60px);">THE WORLD<br><span class="gd">CELEBRATES</span></div>
+    <div class="card-body">
+      In 47 cities, spontaneous crowds gathered in public squares to watch the live feed. In schools from Lagos to Oslo, children had tracked the mission on classroom walls for 14 months.<br><br>
+      <span class="gd">Six people had walked on Mars and come back.</span><br><br>
+      The crew spent their first night aboard the recovery vessel. Dr. Okafor called her mother. Kowalski ate three plates of food and laughed until she fell asleep at the table.<br><br>
+      Mission Commander Chen gave a brief statement from the ship:<br><br>
+      <span class="gr">"We went. We looked. We learned. And we came back to tell you — it is worth going further."</span>
+    </div>
+    <div class="card-btns">
+      <button class="btn-gold" id="btn-parade">MISSION COMPLETE &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 6: MISSION COMPLETE ═══════════ -->
+<div class="screen" id="s-parade">
+  <div class="parade-card">
+    <div style="font-family:var(--font-m);font-size:9px;color:var(--gold);letter-spacing:0.32em;margin-bottom:14px;animation:fadeUp 0.7s 0.2s both;">MISSION ARES VII · COMPLETE</div>
+    <div style="font-family:var(--font-d);font-size:clamp(38px,6.5vw,88px);letter-spacing:0.07em;color:var(--white);line-height:0.88;margin-bottom:18px;animation:pulseGlow 3s infinite,fadeUp 0.8s 0.4s both;">
+      <span style="color:var(--gold);">WELCOME</span><br>HOME
+    </div>
+    <div style="font-family:var(--font-m);font-size:clamp(10px,1.3vw,12px);color:rgba(237,232,224,0.6);letter-spacing:0.07em;line-height:2.1;animation:fadeUp 0.8s 0.7s both;">
+      The six crew of Ares VII became the first humans to set foot on Mars — and to return.<br><br>
+      They brought back <span style="color:var(--gold);">47 kilograms of Martian regolith</span>, core samples from a lake bed that dried up three billion years ago, and proof that the dream of multiplanetary life was no longer a dream.<br><br>
+      It was a plan.
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px;animation:fadeUp 0.8s 1s both;">
+      <div class="cs"><div class="cs-n gd">469</div><div class="cs-l">TOTAL DAYS</div></div>
+      <div class="cs"><div class="cs-n gr">63</div><div class="cs-l">DAYS ON MARS</div></div>
+      <div class="cs"><div class="cs-n gd">47 KG</div><div class="cs-l">SAMPLES RETURNED</div></div>
+    </div>
+    <div class="card-btns" style="margin-top:24px;animation:fadeUp 0.8s 1.3s both;">
+      <button class="btn-gold" id="btn-finale">CHAPTER 10: LEGACY &#8594;</button>
+      <button class="btn-sec" id="btn-back">&#8592; BACK TO CHAPTER 8</button>
+    </div>
+  </div>
+</div>
+
+<!-- TX BAR -->
+<div id="tx-bar">
+  <div class="tx-icon">ARES7 &#9654;</div>
+  <div id="tx-text">MISSION DAY 469 &middot; ENTRY INTERFACE IN 4 MINUTES &middot; ALL SYSTEMS NOMINAL</div>
+</div>
+
+<div id="trans-out"></div>
+
+<script>
+/* ── CURSOR ── */
+var dot=document.getElementById('cur-dot'),ring=document.getElementById('cur-ring');
+var mx=window.innerWidth/2,my=window.innerHeight/2,rx=mx,ry=my;
+document.addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
+(function animRing(){rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(animRing);})();
+
+/* ── CANVAS ── */
+var C=document.getElementById('c'),ctx=C.getContext('2d');
+var W=C.width=window.innerWidth,H=C.height=window.innerHeight;
+window.addEventListener('resize',function(){W=C.width=window.innerWidth;H=C.height=window.innerHeight;});
+
+/* ── STATE ── */
+var currentScreen='s-reentry';
+var phase='entry'; // entry | blackout | parachute | ocean | earth
+var stars=[];
+var particles=[];
+var capsule={x:0,y:0,trail:[]};
+var earthPhase=0; // 0=space 1=blue sky 2=ocean
+var heatGlow=0;
+var parachuteOpen=false;
+var oceanWaves=[];
+var confetti=[];
+var timeE=0;
+
+/* ── STARS ── */
+for(var i=0;i<280;i++){
+  stars.push({x:Math.random(),y:Math.random(),r:0.3+Math.random()*1.5,blink:Math.random()*6.28,spd:0.5+Math.random()*1.5});
+}
+
+/* ── OCEAN WAVES ── */
+for(var i=0;i<8;i++){
+  oceanWaves.push({phase:Math.random()*6.28,speed:0.3+Math.random()*0.4,amp:4+Math.random()*8,y:0.6+i*0.05});
+}
+
+/* ── CONFETTI ── */
+function spawnConfetti(){
+  for(var i=0;i<120;i++){
+    confetti.push({
+      x:Math.random()*W,y:-20-Math.random()*100,
+      vx:(Math.random()-0.5)*3,vy:1+Math.random()*3,
+      size:3+Math.random()*6,
+      color:['#FFD700','#39FF89','#4FC3F7','#EDE8E0','#E8943A'][Math.floor(Math.random()*5)],
+      rot:Math.random()*6.28,rotSpd:(Math.random()-0.5)*0.2,
+      life:1
+    });
+  }
+}
+
+/* ── DRAW ── */
+function draw(ts){
+  ctx.clearRect(0,0,W,H);
+  timeE+=0.016;
+
+  if(phase==='entry'||phase==='blackout'){
+    // Deep space → blue gradient on approach
+    var skyAlpha=Math.min(1,earthPhase*2);
+    var grad=ctx.createLinearGradient(0,0,0,H);
+    if(phase==='entry'){
+      grad.addColorStop(0,'#02040A');
+      grad.addColorStop(1,'rgba(2,8,20,1)');
+    } else {
+      grad.addColorStop(0,'rgba(2,4,10,1)');
+      grad.addColorStop(0.5,'rgba(10,30,60,'+Math.min(0.8,heatGlow*0.5)+')');
+      grad.addColorStop(1,'rgba(2,4,10,1)');
+    }
+    ctx.fillStyle=grad;
+    ctx.fillRect(0,0,W,H);
+
+    // Stars
+    stars.forEach(function(s){
+      var b=0.4+0.6*Math.abs(Math.sin(s.blink+ts*0.0008*s.spd));
+      var fade=phase==='blackout'?Math.max(0,1-heatGlow*1.4):1;
+      ctx.beginPath();
+      ctx.arc(s.x*W,s.y*H,s.r,0,6.28);
+      ctx.fillStyle='rgba(237,232,224,'+b*fade*0.7+')';
+      ctx.fill();
+    });
+
+    // Earth glow from below
+    var earthG=ctx.createRadialGradient(W/2,H*1.3,50,W/2,H*1.3,H*1.1);
+    earthG.addColorStop(0,'rgba(79,195,247,'+(0.08+heatGlow*0.05)+')');
+    earthG.addColorStop(1,'transparent');
+    ctx.fillStyle=earthG;
+    ctx.fillRect(0,0,W,H);
+
+    // Heat plasma during blackout
+    if(phase==='blackout'&&heatGlow>0){
+      var pg=ctx.createRadialGradient(W/2,H*0.6,0,W/2,H*0.6,W*0.5);
+      pg.addColorStop(0,'rgba(255,120,0,'+heatGlow*0.12+')');
+      pg.addColorStop(0.4,'rgba(255,60,0,'+heatGlow*0.07+')');
+      pg.addColorStop(1,'transparent');
+      ctx.fillStyle=pg;
+      ctx.fillRect(0,0,W,H);
+
+      // Capsule silhouette in plasma
+      var cx=W/2,cy=H*0.45;
+      ctx.save();
+      ctx.shadowColor='rgba(255,140,0,'+heatGlow*0.9+')';
+      ctx.shadowBlur=60*heatGlow;
+      ctx.beginPath();
+      ctx.ellipse(cx,cy,28,18,0,0,6.28);
+      ctx.fillStyle='rgba(20,8,0,0.9)';
+      ctx.fill();
+      // plasma trail
+      for(var t=0;t<12;t++){
+        var pt=t/12;
+        ctx.beginPath();
+        ctx.ellipse(cx,cy+20+pt*120,18+pt*30,6+pt*12,0,0,6.28);
+        ctx.fillStyle='rgba(255,'+(80+pt*100)+',0,'+(heatGlow*(1-pt)*0.4)+')';
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+  } else if(phase==='parachute'){
+    // Blue sky gradient
+    var skyG=ctx.createLinearGradient(0,0,0,H);
+    skyG.addColorStop(0,'#0a1828');
+    skyG.addColorStop(0.3,'#1a4a7a');
+    skyG.addColorStop(0.7,'#3a8abf');
+    skyG.addColorStop(1,'#5ab0e0');
+    ctx.fillStyle=skyG;
+    ctx.fillRect(0,0,W,H);
+
+    // Clouds
+    drawClouds(ts);
+
+    // Capsule descending
+    var cy2=H*0.15+Math.sin(ts*0.0005)*8;
+    var cx2=W/2;
+    // chutes
+    ctx.strokeStyle='rgba(237,232,224,0.6)';
+    ctx.lineWidth=1;
+    for(var k=-1;k<=1;k++){
+      ctx.beginPath();
+      ctx.moveTo(cx2+k*22,cy2+18);
+      ctx.quadraticCurveTo(cx2+k*60,-20,cx2+k*60-10,H*0.04);
+      ctx.stroke();
+    }
+    // main chutes
+    for(var k2=-1;k2<=1;k2++){
+      ctx.beginPath();
+      ctx.ellipse(cx2+k2*60-10,H*0.04,28,18,0,0,Math.PI,true);
+      ctx.fillStyle='rgba(232,148,58,0.85)';
+      ctx.fill();
+      ctx.strokeStyle='rgba(237,232,224,0.4)';
+      ctx.lineWidth=1;
+      ctx.stroke();
+    }
+    // capsule body
+    ctx.beginPath();
+    ctx.ellipse(cx2,cy2+22,22,16,0,0,6.28);
+    ctx.fillStyle='rgba(180,160,140,0.9)';
+    ctx.fill();
+
+  } else if(phase==='ocean'||phase==='earth'){
+    // Ocean scene
+    var skyG2=ctx.createLinearGradient(0,0,0,H);
+    skyG2.addColorStop(0,'#0d2137');
+    skyG2.addColorStop(0.45,'#1e5a8a');
+    skyG2.addColorStop(0.5,'#4a9bbf');
+    skyG2.addColorStop(1,'#1a4a6e');
+    ctx.fillStyle=skyG2;
+    ctx.fillRect(0,0,W,H);
+
+    drawClouds(ts);
+
+    // Horizon sun glow
+    var sunG=ctx.createRadialGradient(W*0.65,H*0.42,0,W*0.65,H*0.42,H*0.4);
+    sunG.addColorStop(0,'rgba(255,220,120,0.22)');
+    sunG.addColorStop(1,'transparent');
+    ctx.fillStyle=sunG;
+    ctx.fillRect(0,0,W,H);
+
+    // Ocean
+    var oY=H*0.52;
+    ctx.beginPath();
+    ctx.moveTo(0,oY);
+    oceanWaves.forEach(function(w){
+      for(var x=0;x<=W;x+=4){
+        var y=oY+Math.sin(x*0.012+ts*0.0006*w.speed+w.phase)*w.amp;
+        if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+    });
+    ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();
+    var waveG=ctx.createLinearGradient(0,oY,0,H);
+    waveG.addColorStop(0,'rgba(26,107,138,0.9)');
+    waveG.addColorStop(1,'rgba(10,40,70,1)');
+    ctx.fillStyle=waveG;
+    ctx.fill();
+
+    // Splashdown ripples
+    if(phase==='ocean'){
+      for(var r=0;r<3;r++){
+        var rr=((ts*0.001+r*0.7)%2.1)*W*0.4;
+        ctx.beginPath();
+        ctx.ellipse(W/2,oY+2,rr,rr*0.28,0,0,6.28);
+        ctx.strokeStyle='rgba(79,195,247,'+(0.4-rr/(W*0.4)*0.4)+')';
+        ctx.lineWidth=1.5;
+        ctx.stroke();
+      }
+    }
+
+    // Confetti rain
+    if(phase==='earth'&&confetti.length>0){
+      confetti.forEach(function(c){
+        c.x+=c.vx;c.y+=c.vy;c.rot+=c.rotSpd;
+        if(c.y<H){
+          ctx.save();
+          ctx.translate(c.x,c.y);
+          ctx.rotate(c.rot);
+          ctx.fillStyle=c.color;
+          ctx.globalAlpha=Math.max(0,1-(c.y/H)*0.7);
+          ctx.fillRect(-c.size/2,-c.size/4,c.size,c.size/2);
+          ctx.restore();
+        }
+      });
+      confetti=confetti.filter(function(c){return c.y<H+20;});
+      if(Math.random()<0.3)spawnConfetti();
+    }
+  }
+}
+
+var cloudPts=[];
+for(var i=0;i<18;i++){cloudPts.push({x:Math.random(),y:0.05+Math.random()*0.3,w:60+Math.random()*140,h:20+Math.random()*40,spd:0.00003+Math.random()*0.00004});}
+
+function drawClouds(ts){
+  cloudPts.forEach(function(c){
+    var x=((c.x+ts*c.spd)%1.3-0.1)*W;
+    ctx.beginPath();
+    ctx.ellipse(x,c.y*H,c.w,c.h,0,0,6.28);
+    ctx.fillStyle='rgba(255,255,255,0.08)';
+    ctx.fill();
+  });
+}
+
+/* ── HUD UPDATE ── */
+function updateHUD(ts){
+  if(phase==='entry'){
+    document.getElementById('h-vel').textContent='10.2 KM/S';
+    document.getElementById('h-alt').textContent='125 KM';
+    document.getElementById('h-tps').textContent='NOMINAL';
+    document.getElementById('h-tps').className='gr';
+    document.getElementById('h-blackout').textContent='STANDBY';
+  } else if(phase==='blackout'){
+    document.getElementById('h-vel').textContent='9.8 KM/S';
+    document.getElementById('h-alt').textContent='60 KM';
+    document.getElementById('h-tps').textContent='2760°C';
+    document.getElementById('h-tps').className='gd';
+    document.getElementById('h-blackout').textContent='ACTIVE';
+    document.getElementById('h-blackout').className='rd';
+    document.getElementById('h-signal').textContent='LOST';
+    document.getElementById('h-signal').className='rd';
+  } else if(phase==='parachute'){
+    document.getElementById('h-vel').textContent='8.2 M/S';
+    document.getElementById('h-alt').textContent='6,000 M';
+    document.getElementById('h-tps').textContent='COOLING';
+    document.getElementById('h-tps').className='gr';
+    document.getElementById('h-blackout').textContent='CLEARED';
+    document.getElementById('h-blackout').className='gr';
+    document.getElementById('h-signal').textContent='STRONG';
+    document.getElementById('h-signal').className='gr';
+    document.getElementById('h-chutes').textContent='3× DEPLOYED';
+    document.getElementById('h-chutes').className='gr';
+  } else if(phase==='ocean'||phase==='earth'){
+    document.getElementById('h-vel').textContent='0.0 M/S';
+    document.getElementById('h-alt').textContent='SURFACE';
+    document.getElementById('h-tps').textContent='SAFE';
+    document.getElementById('h-tps').className='gr';
+    document.getElementById('h-blackout').textContent='N/A';
+    document.getElementById('h-blackout').className='gr';
+    document.getElementById('h-chutes').textContent='RECOVERED';
+    document.getElementById('h-chutes').className='gr';
+  }
+}
+
+/* ── BLACKOUT TIMER ── */
+var blackoutSeconds=462; // 7:42
+var blackoutActive=false;
+var blackoutInterval=null;
+function startBlackoutTimer(){
+  blackoutActive=true;
+  blackoutInterval=setInterval(function(){
+    blackoutSeconds--;
+    var m=Math.floor(blackoutSeconds/60),s=blackoutSeconds%60;
+    var el=document.getElementById('blackout-timer');
+    if(el) el.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+    heatGlow=Math.min(1,1-blackoutSeconds/462);
+    if(blackoutSeconds<=0){
+      clearInterval(blackoutInterval);
+      blackoutActive=false;
+      heatGlow=0;
+      setTimeout(function(){
+        phase='parachute';
+        switchScreen('s-signal');
+        updateProgressBar(94);
+        showTx('SIGNAL REACQUIRED · Ares Seven nominal · Three mains deployed · 6 crew confirmed');
+        document.getElementById('h-blackout').textContent='CLEARED';
+        ring.classList.remove('triumph');
+      },800);
+    }
+  },80); // fast sim: 80ms per second
+}
+
+/* ── PROGRESS BAR ── */
+function updateProgressBar(pct){
+  document.getElementById('pb-fill').style.width=pct+'%';
+}
+
+/* ── SCREEN SWITCH ── */
+function switchScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  currentScreen=id;
+  document.getElementById(id).classList.add('active');
+}
+
+/* ── TX ── */
+var txTO=null;
+function showTx(msg){
+  clearTimeout(txTO);
+  document.getElementById('tx-text').textContent=msg;
+  txTO=setTimeout(function(){document.getElementById('tx-text').textContent='';},10000);
+}
+
+/* ── MAIN LOOP ── */
+var lastT=0;
+function loop(ts){
+  var dt=Math.min(ts-lastT,50);lastT=ts;
+  draw(ts);
+  updateHUD(ts);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(function(t){lastT=t;loop(t);});
+
+/* ── CHAPTER FLASH ── */
+var cf=document.getElementById('chapter-flash');
+setTimeout(function(){cf.style.transition='opacity 0.9s';cf.style.opacity='1';},400);
+setTimeout(function(){cf.style.opacity='0';},3000);
+setTimeout(function(){showTx('MISSION DAY 469 · ENTRY INTERFACE MINUS 4 MINUTES · ALL SYSTEMS GO FOR RE-ENTRY');
+  document.getElementById('ticker-wrap').classList.add('show');},900);
+
+/* ── BUTTON EVENTS ── */
+document.getElementById('btn-begin-entry').addEventListener('click',function(){
+  phase='blackout';
+  switchScreen('s-blackout');
+  updateProgressBar(90);
+  ring.classList.add('triumph');
+  document.getElementById('reentry-ring').classList.add('show');
+  showTx('RE-ENTRY INITIATED · Plasma sheath forming · COMM BLACKOUT IN 12 SECONDS');
+  setTimeout(function(){
+    showTx('ARES SEVEN · HOUSTON · WE ARE ENTERING BLACKOUT · SEE YOU ON THE OTHER SIDE');
+    startBlackoutTimer();
+  },2000);
+});
+
+document.getElementById('btn-splashdown').addEventListener('click',function(){
+  phase='ocean';
+  switchScreen('s-splashdown');
+  updateProgressBar(96);
+  showTx('SPLASHDOWN CONFIRMED · PACIFIC SECTOR 4 · RECOVERY FLEET INBOUND · ALL SIX CREW NOMINAL');
+  document.getElementById('reentry-ring').classList.remove('show');
+});
+
+document.getElementById('btn-recovery').addEventListener('click',function(){
+  phase='earth';
+  switchScreen('s-recovery');
+  updateProgressBar(98);
+  spawnConfetti();
+  showTx('CREW RECOVERED · MISSION ARES VII COMPLETE · 469 DAYS · HUMANITY\'S GREATEST JOURNEY');
+  document.getElementById('day-num').textContent='469';
+});
+
+document.getElementById('btn-parade').addEventListener('click',function(){
+  switchScreen('s-parade');
+  updateProgressBar(100);
+  spawnConfetti();
+  ring.classList.add('triumph');
+  showTx('ARES VII · 6 CREW · 469 DAYS · 47KG MARS SAMPLES RETURNED · MISSION COMPLETE');
+});
+
+document.getElementById('btn-finale').addEventListener('click',function(){
+  document.getElementById('trans-out').classList.add('on');
+  setTimeout(function(){window.location.href='section10.html';},1500);
+});
+document.getElementById('btn-back').addEventListener('click',function(){
+  document.getElementById('trans-out').classList.add('on');
+  setTimeout(function(){window.location.href='section8.html';},1500);
+});
+</script>
+</body>
+</html>
