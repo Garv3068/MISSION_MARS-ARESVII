@@ -127,7 +127,24 @@ canvas{position:fixed;inset:0;z-index:0;display:block;}
 /* ──────────────────────────────────────
    SCREEN 4: EARTH — FINAL FADE
 ─────────────────────────────────────── */
-#s-earth{background:transparent;}
+#s-earth{
+  background:transparent;
+  overflow:hidden;
+}
+#earth-bg{
+  position:absolute;inset:0;z-index:0;
+  background-image:url('https://img.freepik.com/premium-photo/3d-rendered-free-photo-planet-earth-with-space-background-galaxy-stars_1066261-77797.jpg');
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  opacity:0;transition:opacity 2.4s ease;
+  transform:scale(1.04);
+}
+#earth-bg.loaded{opacity:1;}
+#earth-bg::after{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at center,transparent 30%,rgba(2,4,10,0.55) 100%),
+    linear-gradient(to bottom,rgba(2,4,10,0.72) 0%,transparent 22%,transparent 78%,rgba(2,4,10,0.80) 100%);
+}
 .earth-center{text-align:center;max-width:520px;width:90vw;position:relative;z-index:22;}
 .earth-tag{font-family:var(--font-m);font-size:9px;color:rgba(79,195,247,0.5);letter-spacing:0.32em;margin-bottom:18px;}
 .earth-title{font-family:var(--font-d);font-size:clamp(44px,8vw,108px);letter-spacing:0.08em;color:var(--white);
@@ -285,6 +302,7 @@ canvas{position:fixed;inset:0;z-index:0;display:block;}
 
 <!-- ═══════════ SCREEN 4: PALE BLUE HOME ═══════════ -->
 <div class="screen" id="s-earth">
+  <div id="earth-bg"></div>
   <div class="earth-center">
     <div class="earth-tag" style="animation:fadeUp 0.6s 0.3s both;">HOME &middot; 1 AU FROM THE SUN &middot; THE ONLY BLUE WORLD</div>
     <div class="earth-title" style="animation:fadeUp 0.8s 0.5s both;">THE PALE<br><span class="bl">BLUE HOME</span></div>
@@ -352,6 +370,11 @@ var earthTargetScale=0;
 var nebulaPts=[];
 var marsSmall={x:0,y:0,visible:false};
 var timeE=0;
+
+/* ── EARTH IMAGE PRELOAD ── */
+var earthImg=new Image();
+earthImg.crossOrigin='anonymous';
+earthImg.src='https://img.freepik.com/premium-photo/3d-rendered-free-photo-planet-earth-with-space-background-galaxy-stars_1066261-77797.jpg';
 
 /* ── STARS ── */
 for(var i=0;i<400;i++){
@@ -464,48 +487,55 @@ function draw(ts){
     earthScale+=(earthTargetScale-earthScale)*0.006;
     var eR=Math.max(0,earthScale);
     var eX=W/2,eY=H*0.5;
+    if(eR<2) return;
 
-    // Earth atmosphere glow
-    var atmG=ctx.createRadialGradient(eX,eY,eR*0.8,eX,eY,eR*1.5);
-    atmG.addColorStop(0,'rgba(79,195,247,0.06)');
-    atmG.addColorStop(1,'transparent');
-    ctx.fillStyle=atmG;
-    ctx.fillRect(0,0,W,H);
+    // ── Outer atmospheric glow (limb) ──
+    var limb=ctx.createRadialGradient(eX,eY,eR*0.88,eX,eY,eR*1.44);
+    limb.addColorStop(0,'rgba(79,195,247,0.22)');
+    limb.addColorStop(0.35,'rgba(79,195,247,0.09)');
+    limb.addColorStop(0.7,'rgba(30,100,180,0.04)');
+    limb.addColorStop(1,'transparent');
+    ctx.fillStyle=limb;
+    ctx.beginPath();ctx.arc(eX,eY,eR*1.44,0,6.28);ctx.fill();
 
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(eX,eY,eR,0,6.28);
-    ctx.clip();
+    ctx.beginPath();ctx.arc(eX,eY,eR,0,6.28);ctx.clip();
 
-    // Ocean base
-    var eG=ctx.createRadialGradient(eX-eR*0.3,eY-eR*0.3,0,eX,eY,eR);
-    eG.addColorStop(0,'#2a8abf');
-    eG.addColorStop(0.4,'#1a5a8a');
-    eG.addColorStop(0.7,'#0d3060');
-    eG.addColorStop(1,'#02080F');
-    ctx.fillStyle=eG;
+    if(earthImg && earthImg.complete && earthImg.naturalWidth>0){
+      // The freepik image has the Earth centered with a space background.
+      // We crop to just the Earth sphere (it sits roughly centered in the image).
+      var iw=earthImg.naturalWidth, ih=earthImg.naturalHeight;
+      // Earth occupies roughly the center ~80% of the image height
+      var cropSize=ih*0.80;
+      var srcX=(iw-cropSize)*0.5;
+      var srcY=(ih-cropSize)*0.5;
+      ctx.drawImage(earthImg, srcX, srcY, cropSize, cropSize, eX-eR, eY-eR, eR*2, eR*2);
+    } else {
+      // Fallback: deep blue ocean while image loads
+      var fb=ctx.createRadialGradient(eX-eR*0.3,eY-eR*0.3,0,eX,eY,eR);
+      fb.addColorStop(0,'#2a8abf');fb.addColorStop(0.5,'#0e4a7a');fb.addColorStop(1,'#031828');
+      ctx.fillStyle=fb;ctx.fillRect(eX-eR,eY-eR,eR*2,eR*2);
+    }
+
+    // ── Terminator shadow (night-side darkening) ──
+    var termG=ctx.createLinearGradient(eX-eR,eY,eX+eR,eY);
+    termG.addColorStop(0,'transparent');
+    termG.addColorStop(0.48,'transparent');
+    termG.addColorStop(0.74,'rgba(2,4,14,0.28)');
+    termG.addColorStop(0.90,'rgba(2,4,10,0.62)');
+    termG.addColorStop(1,'rgba(2,4,10,0.88)');
+    ctx.fillStyle=termG;
     ctx.fillRect(eX-eR,eY-eR,eR*2,eR*2);
 
-    // Landmasses (simplified blobs)
-    ctx.globalAlpha=0.65;
-    [[0.15,0.2,0.3,0.35],[0.4,0.15,0.28,0.32],[0.55,0.3,0.22,0.28],[0.2,0.55,0.18,0.22]].forEach(function(l){
-      ctx.beginPath();
-      ctx.ellipse(eX+eR*(l[0]-0.35),eY+eR*(l[1]-0.25),eR*l[2],eR*l[3],l[0]*2,0,6.28);
-      ctx.fillStyle='rgba(60,120,50,0.8)';
-      ctx.fill();
-    });
+    // ── Inner atmospheric limb glow ──
+    var innerLimb=ctx.createRadialGradient(eX,eY,eR*0.83,eX,eY,eR);
+    innerLimb.addColorStop(0,'transparent');
+    innerLimb.addColorStop(0.86,'rgba(79,195,247,0.08)');
+    innerLimb.addColorStop(1,'rgba(120,200,255,0.36)');
+    ctx.fillStyle=innerLimb;
+    ctx.fillRect(eX-eR,eY-eR,eR*2,eR*2);
 
-    // Clouds
-    ctx.globalAlpha=0.35;
-    var cr=earthRotation;
-    [[0.1+cr*0.05,0.2],[0.3+cr*0.03,-0.15],[0.5+cr*0.04,0.1],[-0.1+cr*0.06,-0.05]].forEach(function(c){
-      ctx.beginPath();
-      ctx.ellipse(eX+eR*c[0],eY+eR*c[1],eR*0.22,eR*0.08,0,0,6.28);
-      ctx.fillStyle='rgba(255,255,255,0.85)';
-      ctx.fill();
-    });
-    ctx.restore();
-    earthRotation+=0.0002;
+    ctx.restore(); // end clip
   }
 }
 
@@ -554,15 +584,19 @@ document.getElementById('btn-letter').addEventListener('click',function(){
 
 document.getElementById('btn-earth').addEventListener('click',function(){
   phase='earth';
-  earthTargetScale=Math.min(W,H)*0.36;
+  earthTargetScale=0; // no canvas earth needed
   switchScreen('s-earth');
   showTx('EARTH APPROACH · 400,000 KM OUT · THE PALE BLUE DOT GROWS LARGER BY THE HOUR');
   document.getElementById('day-num').textContent='469';
+  // Fade in the full-screen photo background
+  var bg=document.getElementById('earth-bg');
+  setTimeout(function(){bg.classList.add('loaded');},80);
 });
 
 document.getElementById('btn-end').addEventListener('click',function(){
   phase='end';
   earthTargetScale=0;
+  document.getElementById('earth-bg').classList.remove('loaded');
   switchScreen('s-end');
   showTx('JOURNEY TO MARS · COMPLETE · THANK YOU FOR FLYING WITH ARES VII');
   document.getElementById('pb-fill').style.background='linear-gradient(to right,var(--gold),var(--ember))';
@@ -570,7 +604,7 @@ document.getElementById('btn-end').addEventListener('click',function(){
 
 document.getElementById('btn-restart').addEventListener('click',function(){
   document.getElementById('trans-out').classList.add('on');
-  setTimeout(function(){window.location.href='index.html';},2000);
+  setTimeout(function(){window.location.href='section1.html';},2000);
 });
 
 document.getElementById('btn-credits').addEventListener('click',function(){
